@@ -1,0 +1,10 @@
+.git
+src/meteornet
+src/honeysat/evaluation
+src/honeysat/deployment/projects/yamcs
+src/honeysat/deployment/projects/vnc-setup
+src/honeysat/deployment/projects/honeysat-webpage-v2
+src/honeysat/deployment/projects/honeysat-suchai-gs
+*.tar.gz
+*.pdf
+documentacion/

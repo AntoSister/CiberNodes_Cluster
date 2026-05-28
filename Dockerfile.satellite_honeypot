@@ -1,0 +1,83 @@
+# Dockerfile para el Nodo Satélite Integrado (VERSIÓN ESTABLE V6)
+FROM ubuntu:22.04 as builder
+
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y \
+    build-essential cmake git python3 python3-pip pkg-config \
+    libzmq3-dev curl wget
+
+COPY ./src/suchai-sim /opt/suchai-sim
+WORKDIR /opt/suchai-sim
+
+# Aseguramos que las dependencias estén presentes y actualizadas
+RUN if [ ! -d "suchai-flight-software" ]; then sh init.sh; fi
+WORKDIR /opt/suchai-sim/suchai-flight-software
+RUN git submodule update --init --recursive
+
+# Aplicamos los parches de compatibilidad (ya hechos en el host, pero aseguramos en el build)
+RUN wget -O src/lib/libcsp/waf https://waf.io/waf-2.1.1 && chmod +x src/lib/libcsp/waf
+
+WORKDIR /opt/suchai-sim
+RUN mkdir -p build && cd build && \
+    cmake .. -DAPP=plantsat -DSCH_NAME=PLANTSAT && \
+    make -j$(nproc)
+
+# Etapa de recolección de artefactos
+RUN mkdir -p /opt/dist && \
+    cp /opt/suchai-sim/build/apps/plantsat/suchai-app /opt/dist/ && \
+    find /opt/suchai-sim/build -name "libcsp.so*" -exec cp {} /opt/dist/ \;
+
+# ETAPA FINAL
+FROM ubuntu:22.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y \
+    python3 python3-pip python3-zmq libzmq5 \
+    iproute2 iputils-ping net-tools telnet \
+    hping3 nmap netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiamos los artefactos recolectados
+COPY --from=builder /opt/dist/ /usr/local/bin/
+RUN mv /usr/local/bin/libcsp.so* /usr/local/lib/ 2>/dev/null || true
+RUN ldconfig
+
+# Simulador HoneySat
+COPY ./src/honeysat/deployment/projects/honeysat-api /opt/honeysat-api
+WORKDIR /opt/honeysat-api
+
+# Instalación de dependencias de HoneySat (Bloques para caché)
+RUN pip3 install --no-cache-dir numpy==1.26.4 scipy==1.15.2 pandas==2.2.3 matplotlib==3.10.1
+RUN pip3 install --no-cache-dir casadi==3.6.7 jax==0.4.27 jaxlib==0.4.27
+RUN pip3 install --no-cache-dir pybamm==25.1.1 pybammsolvers==0.1.0 skyfield==1.52
+RUN pip3 install --no-cache-dir -r requirements.txt
+
+# Pre-descarga de efemérides para evitar fallos de internet
+RUN mkdir -p /opt/honeysat-api/TLE_and_data && \
+    python3 -c "from skyfield.api import Loader; load = Loader('/opt/honeysat-api/TLE_and_data'); load('de421.bsp')"
+
+# Variables de entorno para HoneySat
+ENV PYBAMM_DISABLE_TELEMETRY=1
+ENV SATELLITE_NAME_TLE="ISS"
+ENV SATELLITE_NORAD_CATALOG_NUMBER="25544"
+ENV GROUND_STATION_LAT="52.517389"
+ENV GROUND_STATION_LON="13.395131"
+ENV PYTHONPATH=/opt/honeysat-api
+
+# Entrypoint mejorado: Inicia HoneySat y luego SuchaiFS
+RUN echo '#!/bin/bash\n\
+echo "========================================================="\n\
+echo "   INICIANDO NODO SATELITAL CIBERNODES - VERSIÓN V6      "\n\
+echo "========================================================="\n\
+echo "1. Iniciando Simulador de Física HoneySat (ZMQ: 5555)..."\n\
+python3 -u TestsAndExamples/TestZMQInterface.py > /var/log/honeysat.log 2>&1 &\n\
+sleep 5\n\
+\n\
+echo "2. Iniciando Suchai Flight Software..."\n\
+echo "NOTA: El satélite entrará en modo silencio de despliegue."\n\
+echo "Use el comando help dentro de la consola para ver opciones."\n\
+echo "---------------------------------------------------------"\n\
+/usr/local/bin/suchai-app\n\
+' > /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

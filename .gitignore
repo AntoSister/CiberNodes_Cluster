@@ -1,0 +1,18 @@
+# 🚫 CiberNodes Cluster GitIgnore
+*.so
+*.so.*
+*.a
+*.o
+*.pyc
+__pycache__/
+build/
+bin/
+dist/
+src/honeysat/de421.bsp
+build_context/src/honeysat/de421.bsp
+*.log
+*.out
+*.err
+sat_network.log
+.vscode/
+.DS_Store
