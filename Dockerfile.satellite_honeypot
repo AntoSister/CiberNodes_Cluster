@@ -10,9 +10,9 @@ COPY ./src/suchai-sim /opt/suchai-sim
 WORKDIR /opt/suchai-sim
 
 # Aseguramos que las dependencias estén presentes y actualizadas
-RUN if [ ! -d "suchai-flight-software" ]; then sh init.sh; fi
+# RUN if [ ! -d "suchai-flight-software" ]; then sh init.sh; fi
 WORKDIR /opt/suchai-sim/suchai-flight-software
-RUN git submodule update --init --recursive
+# RUN git submodule update --init --recursive
 
 # Aplicamos los parches de compatibilidad (ya hechos en el host, pero aseguramos en el build)
 RUN wget -O src/lib/libcsp/waf https://waf.io/waf-2.1.1 && chmod +x src/lib/libcsp/waf
