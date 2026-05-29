@@ -12,10 +12,10 @@ echo "=========================================================="
 echo "   EJECUTANDO CIBERNODES EN XI CLUSTER (USACH)            "
 echo "=========================================================="
 
-# 1. Definimos la imagen de GitHub (¡Asegúrate de que sea pública!)
-IMAGE="ghcr.io/antosister/cibernodes_cluster:latest"
+# 1. Imagen con prefijo docker:// para forzar el registro correcto
+IMAGE="docker://ghcr.io/antosister/cibernodes_cluster:latest"
 
-# 2. Ejecutamos usando srun con el plugin Pyxis
+# 2. Ejecutamos usando la ruta de CEPH que nos dio tu 'pwd'
 srun --container-image="$IMAGE" \
-     --container-mounts="/home/XI/acisternas/Documentos/CiberNodes_Cluster:/opt/workspace" \
+     --container-mounts="/home/ceph/acisternas/CiberNodes_Cluster:/opt/workspace" \
      /usr/local/bin/entrypoint.sh
