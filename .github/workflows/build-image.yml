@@ -30,4 +30,4 @@ jobs:
           context: .
           file: ./Dockerfile.satellite_honeypot
           push: true
-          tags: ghcr.io/${{ github.repository }}:latest
+          tags: ghcr.io/antosister/cibernodes_cluter:latest
