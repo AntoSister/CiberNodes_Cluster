@@ -12,11 +12,10 @@ echo "=========================================================="
 echo "   EJECUTANDO CIBERNODES EN XI CLUSTER (USACH)            "
 echo "=========================================================="
 
-# 1. Imagen en Docker Hub (Cámbialo por tu usuario de Docker Hub si es distinto)
-# Si tu usuario es 'antosister', quedará así:
-IMAGE="antosister/cibernodes:latest"
+# 1. Imagen en Docker Hub CORREGIDA con tu usuario acisternas
+IMAGE="acisternas/cibernodes:latest"
 
-# 2. Ejecutamos usando la ruta de CEPH que nos dio tu 'pwd'
+# 2. Ejecutamos usando la ruta de CEPH
 srun --container-image="$IMAGE" \
      --container-mounts="/home/ceph/acisternas/CiberNodes_Cluster:/opt/workspace" \
      /usr/local/bin/entrypoint.sh
