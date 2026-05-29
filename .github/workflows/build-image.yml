@@ -1,0 +1,28 @@
+name: Build and Publish CiberNodes Image
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+steps:
+  - name: Checkout code
+    uses: actions/checkout@v4
+    with:
+      registry: ghcr.io
+      username: ${{ github.actor }}
+      password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-actions@v5
+      with:
+        context: .
+        file: ./Dockerfile.satellite_honeypot
+        push: true
+        tags: ghcr.io/${{ github.repository }}:latest
