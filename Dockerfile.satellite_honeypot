@@ -1,4 +1,4 @@
-# Dockerfile para el Nodo Satélite Integrado (VERSIÓN ESTABLE V6 - CORREGIDA)
+# Dockerfile para el Nodo Satélite Integrado (VERSIÓN ESTABLE V6 - CORREGIDA FINAL)
 FROM ubuntu:22.04 as builder
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -6,20 +6,20 @@ RUN apt-get update && apt-get install -y \
     build-essential cmake git python3 python3-pip pkg-config \
     libzmq3-dev curl wget
 
-# 1. Copiamos Suchai-Sim
+# 1. Copiamos el código
 COPY ./src/suchai-sim /opt/suchai-sim
-# 2. Copiamos libcsp a la ubicación exacta donde SuchaiFS la espera
 COPY ./libcsp /opt/suchai-sim/suchai-flight-software/src/lib/libcsp
 
 WORKDIR /opt/suchai-sim/suchai-flight-software
 
-# 3. CORRECCIÓN CRÍTICA: Cambiamos el comando de waf que da error
+# 2. LIMPIEZA AGRESIVA del comando libcsp en CMakeLists.txt
+# Quitamos "--with-rtable cidr" y lo cambiamos por "--enable-rtable"
 RUN sed -i 's/--with-rtable cidr/--enable-rtable/g' src/lib/CMakeLists.txt
 
-# 4. Descargamos el parche de waf (por si acaso)
+# 3. Descargamos el parche de waf
 RUN wget -O src/lib/libcsp/waf https://waf.io/waf-2.1.1 && chmod +x src/lib/libcsp/waf
 
-# 5. Compilación
+# 4. Compilación
 WORKDIR /opt/suchai-sim
 RUN mkdir -p build && cd build && \
     cmake .. -DAPP=plantsat -DSCH_NAME=PLANTSAT -DSCH_SW_VERSION="3.0.0-cibernodes" && \
@@ -40,7 +40,6 @@ RUN apt-get update && apt-get install -y \
     hping3 nmap netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiamos los artefactos recolectados
 COPY --from=builder /opt/dist/ /usr/local/bin/
 RUN mv /usr/local/bin/libcsp.so* /usr/local/lib/ 2>/dev/null || true
 RUN ldconfig
@@ -49,37 +48,22 @@ RUN ldconfig
 COPY ./src/honeysat/deployment/projects/honeysat-api /opt/honeysat-api
 WORKDIR /opt/honeysat-api
 
-# Instalación de dependencias de HoneySat (Bloques para caché)
 RUN pip3 install --no-cache-dir numpy==1.26.4 scipy==1.15.2 pandas==2.2.3 matplotlib==3.10.1
 RUN pip3 install --no-cache-dir casadi==3.6.7 jax==0.4.27 jaxlib==0.4.27
 RUN pip3 install --no-cache-dir pybamm==25.1.1 pybammsolvers==0.1.0 skyfield==1.52
 RUN pip3 install --no-cache-dir -r requirements.txt
 
-# Pre-descarga de efemérides para evitar fallos de internet
 RUN mkdir -p /opt/honeysat-api/TLE_and_data && \
     python3 -c "from skyfield.api import Loader; load = Loader('/opt/honeysat-api/TLE_and_data'); load('de421.bsp')"
 
-# Variables de entorno para HoneySat
-ENV PYBAMM_DISABLE_TELEMETRY=1
-ENV SATELLITE_NAME_TLE="ISS"
-ENV SATELLITE_NORAD_CATALOG_NUMBER="25544"
-ENV GROUND_STATION_LAT="52.517389"
-ENV GROUND_STATION_LON="13.395131"
 ENV PYTHONPATH=/opt/honeysat-api
+ENV PYBAMM_DISABLE_TELEMETRY=1
 
-# Entrypoint mejorado: Inicia HoneySat y luego SuchaiFS
-RUN echo '#!/bin/bash' > /usr/local/bin/entrypoint.sh && \
-    echo 'echo "========================================================="' >> /usr/local/bin/entrypoint.sh && \
-    echo 'echo "   INICIANDO NODO SATELITAL CIBERNODES - VERSIÓN V6      "' >> /usr/local/bin/entrypoint.sh && \
-    echo 'echo "========================================================="' >> /usr/local/bin/entrypoint.sh && \
-    echo 'echo "1. Iniciando Simulador de Física HoneySat (ZMQ: 5555)..."' >> /usr/local/bin/entrypoint.sh && \
-    echo 'python3 -u TestsAndExamples/TestZMQInterface.py > /var/log/honeysat.log 2>&1 &' >> /usr/local/bin/entrypoint.sh && \
-    echo 'sleep 5' >> /usr/local/bin/entrypoint.sh && \
-    echo 'echo "2. Iniciando Suchai Flight Software..."' >> /usr/local/bin/entrypoint.sh && \
-    echo 'echo "NOTA: El satélite entrará en modo silencio de despliegue."' >> /usr/local/bin/entrypoint.sh && \
-    echo 'echo "Use el comando help dentro de la consola para ver opciones."' >> /usr/local/bin/entrypoint.sh && \
-    echo 'echo "---------------------------------------------------------"' >> /usr/local/bin/entrypoint.sh && \
-    echo '/usr/local/bin/suchai-app' >> /usr/local/bin/entrypoint.sh && \
-    chmod +x /usr/local/bin/entrypoint.sh
+# Entrypoint
+RUN echo '#!/bin/bash\n\
+python3 -u TestsAndExamples/TestZMQInterface.py > /var/log/honeysat.log 2>&1 &\n\
+sleep 5\n\
+/usr/local/bin/suchai-app\n\
+' > /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
