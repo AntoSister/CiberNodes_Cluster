@@ -8,14 +8,7 @@
 #SBATCH --output=cibernodes-%j.out
 #SBATCH --error=cibernodes-%j.err
 
-echo "=========================================================="
-echo "   EJECUTANDO CIBERNODES EN XI CLUSTER (USACH)            "
-echo "=========================================================="
+echo "--- PRUEBA MINIMALISTA ---"
 
-IMAGE="acisternas/cibernodes:latest"
-
-# 2. Ejecutamos SIN entrypoint automático para evitar bloqueos de namespace
-srun --container-image="$IMAGE" \
-     --container-mounts="/home/ceph/acisternas/CiberNodes_Cluster:/opt/workspace" \
-     --no-container-entrypoint \
-     /bin/bash /usr/local/bin/entrypoint.sh
+# Ejecutamos la imagen tal cual, sin montajes ni nada extra
+srun --container-image="acisternas/cibernodes:latest" /usr/local/bin/entrypoint.sh
