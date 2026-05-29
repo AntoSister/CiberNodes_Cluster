@@ -1,4 +1,4 @@
-# Dockerfile para el Nodo Satélite Integrado (VERSIÓN ESTABLE V6 - CORREGIDA FINAL)
+# Dockerfile para CiberNodes - VERSIÓN FINAL CORREGIDA
 FROM ubuntu:22.04 as builder
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -6,33 +6,31 @@ RUN apt-get update && apt-get install -y \
     build-essential cmake git python3 python3-pip pkg-config \
     libzmq3-dev curl wget
 
-# 1. Copiamos el código
+# 1. Copiamos los archivos base
 COPY ./src/suchai-sim /opt/suchai-sim
 COPY ./libcsp /opt/suchai-sim/suchai-flight-software/src/lib/libcsp
 
-WORKDIR /opt/suchai-sim/suchai-flight-software
+# 2. COMPILACIÓN MANUAL DE LIBCSP (Bypass al error de CMake/Waf)
+WORKDIR /opt/suchai-sim/suchai-flight-software/src/lib/libcsp
+# Reemplazamos waf por la versión compatible con Python 3
+RUN wget -O waf https://waf.io/waf-2.1.1 && chmod +x waf
+# Configuramos e instalamos libcsp en la ruta que SuchaiFS espera
+RUN ./waf configure --with-os=posix --enable-if-zmqhub --enable-if-kiss --enable-crc32 --enable-rtable --with-driver-usart=linux --with-max-connections=100 --with-conn-queue-length=1000 --with-router-queue-length=1000 --install-csp --prefix=/opt/suchai-sim/suchai-flight-software/src/lib/libcsp/libcsp
+RUN ./waf build install
 
-# 2. LIMPIEZA AGRESIVA del comando libcsp en CMakeLists.txt
-# Quitamos "--with-rtable cidr" y lo cambiamos por "--enable-rtable"
-RUN sed -i 's/--with-rtable cidr/--enable-rtable/g' src/lib/CMakeLists.txt
-
-# 3. Descargamos el parche de waf
-RUN wget -O src/lib/libcsp/waf https://waf.io/waf-2.1.1 && chmod +x src/lib/libcsp/waf
-
-# 4. Compilación
+# 3. COMPILACIÓN DE SUCHAI-FS
 WORKDIR /opt/suchai-sim
 RUN mkdir -p build && cd build && \
     cmake .. -DAPP=plantsat -DSCH_NAME=PLANTSAT -DSCH_SW_VERSION="3.0.0-cibernodes" && \
     make -j4
 
-# Etapa de recolección de artefactos
+# Recolección de artefactos
 RUN mkdir -p /opt/dist && \
     cp /opt/suchai-sim/build/apps/plantsat/suchai-app /opt/dist/ && \
     find /opt/suchai-sim/build -name "libcsp.so*" -exec cp {} /opt/dist/ \;
 
 # ETAPA FINAL
 FROM ubuntu:22.04
-
 ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
     python3 python3-pip python3-zmq libzmq5 \
@@ -44,22 +42,17 @@ COPY --from=builder /opt/dist/ /usr/local/bin/
 RUN mv /usr/local/bin/libcsp.so* /usr/local/lib/ 2>/dev/null || true
 RUN ldconfig
 
-# Simulador HoneySat
 COPY ./src/honeysat/deployment/projects/honeysat-api /opt/honeysat-api
 WORKDIR /opt/honeysat-api
-
-RUN pip3 install --no-cache-dir numpy==1.26.4 scipy==1.15.2 pandas==2.2.3 matplotlib==3.10.1
-RUN pip3 install --no-cache-dir casadi==3.6.7 jax==0.4.27 jaxlib==0.4.27
-RUN pip3 install --no-cache-dir pybamm==25.1.1 pybammsolvers==0.1.0 skyfield==1.52
-RUN pip3 install --no-cache-dir -r requirements.txt
-
+RUN pip3 install --no-cache-dir numpy==1.26.4 scipy==1.15.2 pandas==2.2.3 matplotlib==3.10.1 \
+    casadi==3.6.7 jax==0.4.27 jaxlib==0.4.27 pybamm==25.1.1 pybammsolvers==0.1.0 skyfield==1.52 \
+    -r requirements.txt
 RUN mkdir -p /opt/honeysat-api/TLE_and_data && \
     python3 -c "from skyfield.api import Loader; load = Loader('/opt/honeysat-api/TLE_and_data'); load('de421.bsp')"
 
 ENV PYTHONPATH=/opt/honeysat-api
 ENV PYBAMM_DISABLE_TELEMETRY=1
 
-# Entrypoint
 RUN echo '#!/bin/bash\n\
 python3 -u TestsAndExamples/TestZMQInterface.py > /var/log/honeysat.log 2>&1 &\n\
 sleep 5\n\
