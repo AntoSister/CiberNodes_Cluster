@@ -12,10 +12,11 @@ echo "=========================================================="
 echo "   EJECUTANDO CIBERNODES EN XI CLUSTER (USACH)            "
 echo "=========================================================="
 
-# 1. Ruta al archivo .sqsh que acabas de crear (estará en tu HOME)
-IMAGE="/home/ceph/acisternas/antosister+cibernodes_cluster+latest.sqsh"
+# 1. Imagen en Docker Hub (Cámbialo por tu usuario de Docker Hub si es distinto)
+# Si tu usuario es 'antosister', quedará así:
+IMAGE="antosister/cibernodes:latest"
 
-# 2. Ejecutamos usando el archivo local
+# 2. Ejecutamos usando la ruta de CEPH que nos dio tu 'pwd'
 srun --container-image="$IMAGE" \
      --container-mounts="/home/ceph/acisternas/CiberNodes_Cluster:/opt/workspace" \
      /usr/local/bin/entrypoint.sh

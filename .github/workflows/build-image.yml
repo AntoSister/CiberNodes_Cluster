@@ -1,4 +1,4 @@
-name: Build and Publish CiberNodes Image
+name: Build and Publish to Docker Hub
 
 on:
   push:
@@ -7,22 +7,17 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Log in to Github Container Registry
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: \${{ secrets.DOCKERHUB_USERNAME }}
+          password: \${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -30,4 +25,4 @@ jobs:
           context: .
           file: ./Dockerfile.satellite_honeypot
           push: true
-          tags: ghcr.io/antosister/cibernodes_cluter:latest
+          tags: \${{ secrets.DOCKERHUB_USERNAME }}/cibernodes:latest
