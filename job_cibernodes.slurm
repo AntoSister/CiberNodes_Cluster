@@ -12,10 +12,10 @@ echo "=========================================================="
 echo "   EJECUTANDO CIBERNODES EN XI CLUSTER (USACH)            "
 echo "=========================================================="
 
-# 1. Imagen con prefijo docker:// para forzar el registro correcto
-IMAGE="docker://ghcr.io/antosister/cibernodes_cluster:latest"
+# 1. Imagen sin el prefijo manual, ya que el sistema parece añadirlo solo
+IMAGE="ghcr.io/antosister/cibernodes_cluster:latest"
 
-# 2. Ejecutamos usando la ruta de CEPH que nos dio tu 'pwd'
+# 2. Ejecutamos usando la ruta de CEPH
 srun --container-image="$IMAGE" \
      --container-mounts="/home/ceph/acisternas/CiberNodes_Cluster:/opt/workspace" \
      /usr/local/bin/entrypoint.sh
