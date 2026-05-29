@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y \
     libzmq3-dev curl wget
 
 COPY ./src/suchai-sim /opt/suchai-sim
+COPY ./libcsp /opt/suchai-sim/suchai-flight-software/src/lib/libcsp
 WORKDIR /opt/suchai-sim
 
 # Aseguramos que las dependencias estén presentes y actualizadas
@@ -19,7 +20,7 @@ RUN wget -O src/lib/libcsp/waf https://waf.io/waf-2.1.1 && chmod +x src/lib/libc
 
 WORKDIR /opt/suchai-sim
 RUN mkdir -p build && cd build && \
-    cmake .. -DAPP=plantsat -DSCH_NAME=PLANTSAT && \
+    cmake .. -DAPP=plantsat -DSCH_NAME=PLANTSAT -DSCH_SW_VERSION="3.0.0-cibernodes" && \
     make -j$(nproc)
 
 # Etapa de recolección de artefactos
