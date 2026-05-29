@@ -1,4 +1,4 @@
-# Dockerfile para el Nodo Satélite Integrado (VERSIÓN ESTABLE V6)
+# Dockerfile para el Nodo Satélite Integrado (VERSIÓN ESTABLE V6 - CORREGIDA)
 FROM ubuntu:22.04 as builder
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -6,22 +6,24 @@ RUN apt-get update && apt-get install -y \
     build-essential cmake git python3 python3-pip pkg-config \
     libzmq3-dev curl wget
 
+# 1. Copiamos Suchai-Sim
 COPY ./src/suchai-sim /opt/suchai-sim
+# 2. Copiamos libcsp a la ubicación exacta donde SuchaiFS la espera
 COPY ./libcsp /opt/suchai-sim/suchai-flight-software/src/lib/libcsp
-WORKDIR /opt/suchai-sim
 
-# Aseguramos que las dependencias estén presentes y actualizadas
-# RUN if [ ! -d "suchai-flight-software" ]; then sh init.sh; fi
 WORKDIR /opt/suchai-sim/suchai-flight-software
-# RUN git submodule update --init --recursive
 
-# Aplicamos los parches de compatibilidad (ya hechos en el host, pero aseguramos en el build)
+# 3. CORRECCIÓN CRÍTICA: Cambiamos el comando de waf que da error
+RUN sed -i 's/--with-rtable cidr/--enable-rtable/g' src/lib/CMakeLists.txt
+
+# 4. Descargamos el parche de waf (por si acaso)
 RUN wget -O src/lib/libcsp/waf https://waf.io/waf-2.1.1 && chmod +x src/lib/libcsp/waf
 
+# 5. Compilación
 WORKDIR /opt/suchai-sim
 RUN mkdir -p build && cd build && \
     cmake .. -DAPP=plantsat -DSCH_NAME=PLANTSAT -DSCH_SW_VERSION="3.0.0-cibernodes" && \
-    make -j$(nproc)
+    make -j4
 
 # Etapa de recolección de artefactos
 RUN mkdir -p /opt/dist && \
@@ -66,19 +68,18 @@ ENV GROUND_STATION_LON="13.395131"
 ENV PYTHONPATH=/opt/honeysat-api
 
 # Entrypoint mejorado: Inicia HoneySat y luego SuchaiFS
-RUN echo '#!/bin/bash\n\
-echo "========================================================="\n\
-echo "   INICIANDO NODO SATELITAL CIBERNODES - VERSIÓN V6      "\n\
-echo "========================================================="\n\
-echo "1. Iniciando Simulador de Física HoneySat (ZMQ: 5555)..."\n\
-python3 -u TestsAndExamples/TestZMQInterface.py > /var/log/honeysat.log 2>&1 &\n\
-sleep 5\n\
-\n\
-echo "2. Iniciando Suchai Flight Software..."\n\
-echo "NOTA: El satélite entrará en modo silencio de despliegue."\n\
-echo "Use el comando help dentro de la consola para ver opciones."\n\
-echo "---------------------------------------------------------"\n\
-/usr/local/bin/suchai-app\n\
-' > /usr/local/bin/entrypoint.sh && chmod +x /usr/local/bin/entrypoint.sh
+RUN echo '#!/bin/bash' > /usr/local/bin/entrypoint.sh && \
+    echo 'echo "========================================================="' >> /usr/local/bin/entrypoint.sh && \
+    echo 'echo "   INICIANDO NODO SATELITAL CIBERNODES - VERSIÓN V6      "' >> /usr/local/bin/entrypoint.sh && \
+    echo 'echo "========================================================="' >> /usr/local/bin/entrypoint.sh && \
+    echo 'echo "1. Iniciando Simulador de Física HoneySat (ZMQ: 5555)..."' >> /usr/local/bin/entrypoint.sh && \
+    echo 'python3 -u TestsAndExamples/TestZMQInterface.py > /var/log/honeysat.log 2>&1 &' >> /usr/local/bin/entrypoint.sh && \
+    echo 'sleep 5' >> /usr/local/bin/entrypoint.sh && \
+    echo 'echo "2. Iniciando Suchai Flight Software..."' >> /usr/local/bin/entrypoint.sh && \
+    echo 'echo "NOTA: El satélite entrará en modo silencio de despliegue."' >> /usr/local/bin/entrypoint.sh && \
+    echo 'echo "Use el comando help dentro de la consola para ver opciones."' >> /usr/local/bin/entrypoint.sh && \
+    echo 'echo "---------------------------------------------------------"' >> /usr/local/bin/entrypoint.sh && \
+    echo '/usr/local/bin/suchai-app' >> /usr/local/bin/entrypoint.sh && \
+    chmod +x /usr/local/bin/entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
