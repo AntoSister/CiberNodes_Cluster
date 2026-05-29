@@ -3,8 +3,8 @@
 #SBATCH --partition=batch
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=2
-#SBATCH --mem=4G
+#SBATCH --cpus-per-task=1
+#SBATCH --mem=2G
 #SBATCH --output=cibernodes-%j.out
 #SBATCH --error=cibernodes-%j.err
 
@@ -12,10 +12,10 @@ echo "=========================================================="
 echo "   EJECUTANDO CIBERNODES EN XI CLUSTER (USACH)            "
 echo "=========================================================="
 
-# 1. Imagen en Docker Hub CORREGIDA con tu usuario acisternas
 IMAGE="acisternas/cibernodes:latest"
 
-# 2. Ejecutamos usando la ruta de CEPH
+# 2. Ejecutamos SIN entrypoint automático para evitar bloqueos de namespace
 srun --container-image="$IMAGE" \
      --container-mounts="/home/ceph/acisternas/CiberNodes_Cluster:/opt/workspace" \
-     /usr/local/bin/entrypoint.sh
+     --no-container-entrypoint \
+     /bin/bash /usr/local/bin/entrypoint.sh
