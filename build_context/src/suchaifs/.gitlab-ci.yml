@@ -1,0 +1,173 @@
+stages:
+  - create_vis
+  - configure_docker
+  - build
+  - test_linux
+  - test_fuzz
+
+create_vis:
+  stage: create_vis
+  script:
+    - echo "Creating Visualizations"
+    - whoami
+    - pwd
+    - cd $HOME/Analyse/SUCHAI-Flight-Software
+    - git pull origin master
+    - last_commit=`git log -1 --pretty=%h`
+    - echo $last_commit
+    - cd ../Analyse
+    - python3 suchai_analysis.py ../SUCHAI-Flight-Software --hash $last_commit --svg
+    - commit_file=`find . -maxdepth 1 -name "*\$last_commit.html" -print`
+    - svg_file=`find . -maxdepth 1 -name "*\$last_commit.svg" -print`
+    - cp -f $commit_file /home/ubuntu/SpelDataServer/public/viz_html/
+    - rm $commit_file
+    - echo http://data.spel.cl/viz_html${commit_file#"."}
+    - cp -f $svg_file /home/ubuntu/SpelDataServer/public/viz_svg/
+    - cp -f $svg_file /home/ubuntu/SpelDataServer/public/viz_svg/last.svg
+    - rm $svg_file
+    - echo http://data.spel.cl/viz_svg${svg_file#"."}
+  only:
+    - master
+
+configure_docker:
+  stage: configure_docker
+  script:
+    - echo "Configure docker image"
+    - cd $HOME/suchai-docker
+    - git pull
+    - cd suchai-fs
+    - docker build --no-cache -t suchai-fs .
+    - docker system prune -f
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "feature/framework"'
+    - if: '$CI_COMMIT_BRANCH == "master"'
+
+build_linux:
+  stage: build
+  script:
+    - echo "Building in Linux"
+    - echo "Going to execute the following commands" && docker run -i suchai-fs cat install_build_linux.sh
+    - docker run -v ~/.ssh:/root/.ssh -i suchai-fs sh install_build_linux.sh
+    - docker system prune -f
+  only:
+    - master
+
+build_esp:
+  stage: build
+  script:
+    - echo "Building in esp32"
+    - echo "Going to execute the following commands" && docker run -i suchai-fs cat install_build_esp32.sh
+    - docker run -v ~/.ssh:/root/.ssh -i suchai-fs sh install_build_linux.sh
+    - docker system prune -f
+  only:
+    - master
+
+build_nanomind:
+  stage: build
+  script:
+    - echo "Building in nanomind"
+    - echo "Going to execute the following commands" && docker run -i suchai-fs cat install_build_nanomind.sh
+    - docker run -v ~/.ssh:/root/.ssh -i suchai-fs sh install_build_nanomind.sh
+    - docker system prune -f
+  only:
+    - master
+
+test_unit_feature_framework:
+  stage: test_linux
+  script:
+    - echo "Unit testing of the feature/framework branch in Linux"
+    - echo "Going to execute the following commands" && docker run -i suchai-fs cat install_test_linux_framework.sh
+    - docker run -v ~/.ssh:/root/.ssh -i suchai-fs sh install_test_linux_framework.sh test_unit
+    - docker system prune -f
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "feature/framework"'
+
+test_integration_feature_framework:
+  stage: test_linux
+  script:
+    - echo "Integration testing of the feature/framework branch in Linux"
+    - echo "Going to execute the following commands" && docker run -i suchai-fs cat install_test_linux_framework.sh
+    - docker run -v ~/.ssh:/root/.ssh -i suchai-fs sh install_test_linux_framework.sh test_int
+    - docker system prune -f
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "feature/framework"'
+
+test_cmd:
+  stage: test_linux
+  script:
+    - echo "Testing in Linux"
+    - echo "Going to execute the following commands" && docker run -i suchai-fs cat install_test_linux.sh
+    - docker run -v ~/.ssh:/root/.ssh -i suchai-fs sh install_test_linux.sh test_cmd
+    - docker system prune -f
+  only:
+    - master
+
+test_unit:
+  stage: test_linux
+  script:
+    - echo "Testing in Linux"
+    - echo "Going to execute the following commands" && docker run -i suchai-fs cat install_test_linux.sh
+    - cd $HOME/suchai-docker
+    - docker-compose -f sat-gnd-com.yml  run  suchai_sat sh install_test_linux.sh test_unit
+    - docker-compose -f sat-gnd-com.yml down
+    - docker system prune -f
+  only:
+    - master
+
+test_load:
+  stage: test_linux
+  script:
+    - echo "Testing in Linux"
+    - echo "Going to execute the following commands" && docker run -i suchai-fs cat install_test_linux.sh
+    - docker run -v ~/.ssh:/root/.ssh -i suchai-fs sh install_test_linux.sh test_load
+    - docker system prune -f
+  only:
+    - master
+
+test_bug_delay:
+  stage: test_linux
+  script:
+    - echo "Testing in Linux"
+    - echo "Going to execute the following commands" && docker run -i suchai-fs cat install_test_linux.sh
+    - docker run -v ~/.ssh:/root/.ssh -i suchai-fs sh install_test_linux.sh test_bug_delay
+    - docker system prune -f
+  only:
+    - master
+
+test_sgp4:
+  stage: test_linux
+  script:
+    - echo "Testing in Linux"
+    - echo "Going to execute the following commands" && docker run -i suchai-fs cat install_test_linux.sh
+    - docker run -v ~/.ssh:/root/.ssh -i suchai-fs sh install_test_linux.sh test_sgp4
+    - docker system prune -f
+  only:
+    - master
+
+test_sequences:
+  stage: test_linux
+  script:
+    - echo "Testing in Linux"
+    - echo "Going to execute the following commands" && docker run -i suchai-fs cat install_test_linux.sh
+    - cd $HOME/suchai-docker
+    - docker-compose -f sat-gnd-com.yml  run  suchai_sat sh install_test_linux.sh test_fuzz
+    - docker-compose -f sat-gnd-com.yml down
+    - docker system prune -f
+  only:
+    - master
+
+test_fuzzing:
+  stage: test_fuzz
+  script:
+    - docker run -v ~/.ssh:/root/.ssh -i suchai-fs bash install_test_fuzzy-framework.sh
+    - docker system prune -f
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "feature/framework"'
+
+test_build_framework:
+  stage: build
+  script:
+    - docker run -v ~/.ssh:/root/.ssh -i suchai-fs sh install_build_framework.sh
+    - docker system prune -f
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "feature/framework"'

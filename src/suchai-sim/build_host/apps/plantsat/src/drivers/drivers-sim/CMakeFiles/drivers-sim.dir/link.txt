@@ -1,0 +1,2 @@
+/usr/bin/ar qc libdrivers-sim.a "CMakeFiles/drivers-sim.dir/interface.c.o" "CMakeFiles/drivers-sim.dir/adcs.c.o" "CMakeFiles/drivers-sim.dir/camera.c.o" "CMakeFiles/drivers-sim.dir/cdh.c.o" "CMakeFiles/drivers-sim.dir/eps.c.o"
+/usr/bin/ranlib libdrivers-sim.a

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsuchai-fs-drivers.a "CMakeFiles/suchai-fs-drivers.dir/x86/init.c.o" "CMakeFiles/suchai-fs-drivers.dir/x86/i2c.c.o" "CMakeFiles/suchai-fs-drivers.dir/x86/cpu.c.o"
+/usr/bin/ranlib libsuchai-fs-drivers.a

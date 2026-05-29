@@ -1,0 +1,149 @@
+#
+# About: Install SatCon and ALL dependencies using Ansible
+#
+
+---
+- name: Install SatCon
+  hosts: all
+  gather_facts: true
+
+  vars:
+    # The directory where comnetsemu's source code is located.
+    # Use relative path
+    TOP_DIR: "../"
+
+  tasks:
+
+  - name: Create directories
+    file:
+      path: "{{ item }}"
+      state: directory
+    with_items: 
+    - "{{ TOP_DIR }}/satcon_dependencies"
+
+  - name: Find deprecated/unused directories and files created by the older SatCon installer
+    find:
+      paths: "{{ TOP_DIR }}/satcon_dependencies"
+      patterns:
+        - "docker-*"
+        - "mininet-*"
+        - "ryu-*"
+      file_type: directory
+    register: directories_to_remove
+
+  - name: Delete deprecated/unused directories and files created by the older SatCon installer
+    file:
+      path: "{{ item.path }}"
+      state: absent
+    with_items: "{{ directories_to_remove.files }}"
+
+  - name: Update apt-get repo and cache
+    become: true
+    apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+
+  - name: Clone Mininet repo
+    git:
+      repo: https://github.com/mininet/mininet
+      dest: "{{ TOP_DIR }}/satellite_constellation/mininet"
+      # Unreleased version 2.3.1b1
+      # This version is needed because it replace all git URLs to https!
+      version: aa0176fce6fb718a03474f8719261b07b670d30d
+      force: yes
+
+  # Patch source code directly, instead of using runtime monkey patching
+  #- name: Patch Mininet source code
+    #patch:
+      #src: "{{ TOP_DIR }}/comnetsemu/patch/mininet/util.py.patch"
+      #dest: "{{ TOP_DIR }}/comnetsemu_dependencies/mininet/mininet/util.py"
+
+  - name: Remove installed openflow directory to force re-install
+    file:
+      path: "{{ TOP_DIR }}/satellite_constellation/openflow"
+      state: absent
+
+  - name: Install Mininet and its minimal dependencies
+    shell: PYTHON=python3 ./install.sh -nfvw
+    args:
+      chdir: "{{ TOP_DIR }}/satellite_constellation/mininet/util"
+
+  - name: Install all deb packages required by SatCon from the official Ubuntu repo
+    become: true
+    apt:
+      name:
+        - docker.io
+        - linux-headers-{{ ansible_kernel }}
+        - python3-docker
+        - python3-libtmux
+        - python3-pip
+        - python3-pyroute2
+        - python3-requests
+        - rt-tests
+        - stress-ng
+        - tmux
+        - wireguard
+      state: latest
+
+  #- name: Install the SatCon Python package
+    #become: true
+    #shell: pip3 install .
+    #args:
+      #chdir: "{{ TOP_DIR }}/comnetsemu"
+
+  - name: Build all test containers for SatCon (required for unit tests and some built-in examples)
+    become: true
+    shell: python3 ./build.py
+    args:
+      chdir: "{{ TOP_DIR }}/satellite_constellation/containers"
+
+  # You can comment out tasks related to install development packages if you don't want to modify or extend
+  # the source code of SatCon and build the HTML documentation locally.
+  - name: Install packages required for the development of SatCon
+    become: true
+    apt:
+      name:
+        - black
+        - pylint
+        - python3-coverage
+        - python3-flake8
+        - python3-ipdb
+        - python3-pytest
+        - shellcheck
+      state: latest
+
+  - name: Install python packages
+    become: true
+    # Pip must be used here since many required packages are not currently in Ubuntu's repo.
+    shell: pip3 install -r ./requirements.txt
+    args:
+      chdir: "{{ TOP_DIR }}/satellite_constellation"
+
+  - name: Install mongo DB repo
+    become: true
+    shell: curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+    args:
+      chdir: "{{ TOP_DIR }}/satellite_constellation"
+
+  - name: Install mongo DB
+    become: true
+    shell: echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+    args:
+      chdir: "{{ TOP_DIR }}/satellite_constellation"
+
+  - name: Update after add mongo
+    become: true
+    shell: apt update && apt install -y mongodb-org
+    args:
+      chdir: "{{ TOP_DIR }}/satellite_constellation"
+
+  - name: Update after add mongo
+    become: true
+    shell: apt update
+    args:
+      chdir: "{{ TOP_DIR }}/satellite_constellation"
+
+  - name: Start and enable the Docker service
+    become: true
+    systemd:
+      name: docker
+      state: started
+      enabled: yes

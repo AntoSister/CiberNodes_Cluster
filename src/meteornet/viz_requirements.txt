@@ -1,0 +1,5 @@
+vtk
+pyvista
+pyvistaqt
+pyqt5
+qtpy

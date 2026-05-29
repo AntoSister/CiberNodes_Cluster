@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsuchai-fs-os.a "CMakeFiles/suchai-fs-os.dir/linux/osDelay.c.o" "CMakeFiles/suchai-fs-os.dir/linux/osQueue.c.o" "CMakeFiles/suchai-fs-os.dir/linux/osScheduler.c.o" "CMakeFiles/suchai-fs-os.dir/linux/osSemphr.c.o" "CMakeFiles/suchai-fs-os.dir/linux/osThread.c.o" "CMakeFiles/suchai-fs-os.dir/linux/pthread_queue.c.o"
+/usr/bin/ranlib libsuchai-fs-os.a

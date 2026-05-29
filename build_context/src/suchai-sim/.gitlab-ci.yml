@@ -1,0 +1,37 @@
+stages:
+  - configure_docker
+  - build
+
+configure_docker:
+  stage: configure_docker
+  script:
+    - echo "Configure docker image"
+    - echo "($pwd)"
+    - echo "($ls)"
+    - cd $HOME/suchai-docker
+    - git pull
+    - cd suchai-fs-2
+    - docker build --no-cache -t suchai-fs-2 .
+    - docker system prune -f
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "framework"'
+
+build_groundstation:
+  stage: build
+  script:
+    - echo "Building in Linux"
+    - echo "Going to execute the following commands" && docker run -i suchai-fs-2 cat install_build_groundstation.sh
+    - docker run -v ~/.ssh:/root/.ssh -i suchai-fs-2 sh install_build_groundstation.sh
+    - docker system prune -f
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "framework"'
+
+build_nanomind:
+  stage: build
+  script:
+    - echo "Building in nanomind"
+    - echo "Going to execute the following commands" && docker run -i suchai-fs-2 cat install_build_nanomind.sh
+    - docker run -v ~/.ssh:/root/.ssh -i suchai-fs-2 sh install_build_nanomind.sh
+    - docker system prune -f
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "framework"'

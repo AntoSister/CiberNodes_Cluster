@@ -1,0 +1,14 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/meme/Documentos/CiberNodes/src/suchai-sim/build_host/cmake_install.cmake",
+		"/home/meme/Documentos/CiberNodes/src/suchai-sim/build_host/apps/plantsat/cmake_install.cmake",
+		"/home/meme/Documentos/CiberNodes/src/suchai-sim/build_host/apps/plantsat/src/drivers/drivers-sim/cmake_install.cmake",
+		"/home/meme/Documentos/CiberNodes/src/suchai-sim/build_host/suchai-flight-software/src/cmake_install.cmake",
+		"/home/meme/Documentos/CiberNodes/src/suchai-sim/build_host/suchai-flight-software/src/drivers/cmake_install.cmake",
+		"/home/meme/Documentos/CiberNodes/src/suchai-sim/build_host/suchai-flight-software/src/lib/cmake_install.cmake",
+		"/home/meme/Documentos/CiberNodes/src/suchai-sim/build_host/suchai-flight-software/src/os/cmake_install.cmake",
+		"/home/meme/Documentos/CiberNodes/src/suchai-sim/build_host/suchai-flight-software/src/system/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

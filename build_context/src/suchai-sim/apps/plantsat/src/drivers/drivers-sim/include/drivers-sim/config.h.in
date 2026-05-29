@@ -1,0 +1,10 @@
+//
+// Created by carlos on 3/28/24.
+//
+
+#ifndef SUCHAI_FLIGHT_SOFTWARE_INTERFACE_CONFIG_H
+#define SUCHAI_FLIGHT_SOFTWARE_INTERFACE_CONFIG_H
+
+#cmakedefine SCH_SIM_INTERFACE_URI @SCH_SIM_INTERFACE_URI@  ///< Drivers interface endpoint
+
+#endif //SUCHAI_FLIGHT_SOFTWARE_INTERFACE_CONFIG_H

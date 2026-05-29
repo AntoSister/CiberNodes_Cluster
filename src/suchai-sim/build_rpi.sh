@@ -1,0 +1,4 @@
+#!/bin/bash
+OPTIONS="-DAPP=simple -DSCH_OS=LINUX -DSCH_ARCH=RPI -DSCH_NAME=\"RPI\" -DSCH_ST_MODE=SQLITE -DSCH_COMM_NODE=4 -DSCH_HOOK_COMM=0 -DSCH_CSP_BUFFERS=1000 -DSCH_COM_TX_DELAY_MS=1000 -DSCH_MAX_WDT_TIMER=99999"
+rm -rf build-rpi
+cmake -B build-rpi -G Ninja $OPTIONS && cmake --build build-rpi -j2

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsuchai-fs-lib.a "CMakeFiles/suchai-fs-lib.dir/utils/math_utils.c.o" "CMakeFiles/suchai-fs-lib.dir/utils/log_utils.c.o" "CMakeFiles/suchai-fs-lib.dir/igrf/igrf13.c.o" "CMakeFiles/suchai-fs-lib.dir/sgp4/src/c/SGP4.c.o" "CMakeFiles/suchai-fs-lib.dir/sgp4/src/c/TLE.c.o" "CMakeFiles/suchai-fs-lib.dir/linenoise/linenoise.c.o" "CMakeFiles/suchai-fs-lib.dir/storage/storage_ram.c.o"
+/usr/bin/ranlib libsuchai-fs-lib.a

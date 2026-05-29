@@ -1,0 +1,25 @@
+#ifndef SUCHAI_APP_CONFIG_H
+#define	SUCHAI_APP_CONFIG_H
+
+/* Select one operating system */
+#cmakedefine SUCHAI2                     1
+#cmakedefine SUCHAI3                     2
+#cmakedefine PLANTSAT                    3
+
+#define SCH_TNC_ADDRESS        9  ///< Nanocom GS100 address
+#define SCH_TRX_ADDRESS        5  ///< Nanocom GS100 address
+#cmakedefine SCH_TX_INHIBIT         @SCH_TX_INHIBIT@  /// Default silent time in seconds [0, 1800 (30min)]
+#cmakedefine SCH_TX_FREQ            @SCH_TX_FREQ@  ///< Nanocom TX freq in Hz
+#define SCH_TX_PWR             @SCH_TX_PWR@  ///< Nanocom TX power (0: 25dBm, 1: 27dBm, 2: 28dBm, 3: 30dBm)
+#cmakedefine SCH_TX_BAUD            @SCH_TX_BAUD@  ///< Nanocom TX Baudrate bps (4800, 9600, 19200)
+#cmakedefine SCH_TX_BCN_PERIOD      @SCH_TX_BCN_PERIOD@  ///< Number of seconds between trx beacon packets
+#cmakedefine SCH_OBC_BCN_OFFSET     @SCH_OBC_BCN_OFFSET@  ///< Number of seconds between obc beacon packets
+#define SCH_WDT_PERIOD          120
+
+#cmakedefine01 SCH_HK_ENABLED
+#cmakedefine01 SCH_SEN_ENABLED
+#cmakedefine01 SCH_ADCS_ENABLED
+
+#define SCH_EPS_OUT_ENABLED @SCH_EPS_OUT_ENABLED@
+
+#endif //SUCHAI_APP_CONFIG_H

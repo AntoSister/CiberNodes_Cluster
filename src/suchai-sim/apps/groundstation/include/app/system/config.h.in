@@ -1,0 +1,12 @@
+#ifndef SUCHAI_APP_CONFIG_H
+#define	SUCHAI_APP_CONFIG_H
+
+#define SCH_TNC_ADDRESS        9  ///< Nanocom GS100 address
+#cmakedefine SCH_TX_FREQ            @SCH_TX_FREQ@  ///< Nanocom TX freq in Hz
+#define SCH_TX_PWR             @SCH_TX_PWR@  ///< Nanocom TX power (0: 25dBm, 1: 27dBm, 2: 28dBm, 3: 30dBm)
+#cmakedefine SCH_TX_BAUD            @SCH_TX_BAUD@  ///< Nanocom TX Baudrate bps (4800, 9600, 19200)
+#cmakedefine SCH_TX_BCN_PERIOD      @SCH_TX_BCN_PERIOD@  ///< Number of seconds between trx beacon packets
+#cmakedefine SCH_OBC_BCN_OFFSET     @SCH_OBC_BCN_OFFSET@  ///< Number of seconds between obc beacon packets
+#cmakedefine01 SCH_GND_ADD_PAYLOADS
+
+#endif //SUCHAI_APP_CONFIG_H

@@ -1,0 +1,9 @@
+sgp4
+pandas
+numpy
+docker
+pymongo
+mininet
+scipy
+pyproj
+eventlet==0.30.2

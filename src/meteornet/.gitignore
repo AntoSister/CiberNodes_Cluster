@@ -1,0 +1,24 @@
+*.log
+*.json
+mininet
+sflow-rt
+ryu
+.idea
+.txt
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+containers/*.logs
+.conda
+*.gz
+.vagrant
+*checkpoint.ipynb
+rl_data
+*.pdf
+*.csv
+*-swp
+*.svg
+*.png
+!data/images/*.png
+*.logs

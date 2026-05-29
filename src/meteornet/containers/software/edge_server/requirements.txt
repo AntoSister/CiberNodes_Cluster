@@ -1,0 +1,7 @@
+Flask
+numpy
+scipy
+requests
+gunicorn
+pymongo
+tensorflow

@@ -1,0 +1,37 @@
+#
+# About: Default image for development, tests and basic examples.
+#
+
+FROM ubuntu:22.04
+COPY bashrc /root/.bashrc
+
+RUN apt-get -qy update && \
+	DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+	bash \
+	bash-completion \
+	curl \
+	iperf \
+	iperf3 \
+	iproute2 \
+	iputils-ping \
+	net-tools \
+	stress-ng \
+	tcpdump \
+    netcat \
+    htop \
+    default-jre \
+    python3 \
+    python3-pip\
+	nano\
+	telnet && \
+	rm -rf /var/lib/apt/lists/*
+
+COPY software/edge_server/requirements.txt /home/edge_server/
+WORKDIR /home/edge_server
+RUN pip3 install -r requirements.txt
+COPY software/edge_server /home/edge_server
+
+
+EXPOSE 5000
+
+CMD ["bash"]
