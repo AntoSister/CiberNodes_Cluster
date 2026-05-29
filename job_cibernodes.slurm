@@ -12,8 +12,8 @@ echo "=========================================================="
 echo "   EJECUTANDO CIBERNODES EN XI CLUSTER (USACH)            "
 echo "=========================================================="
 
-# 1. Imagen sin el prefijo manual, ya que el sistema parece añadirlo solo
-IMAGE="ghcr.io/antosister/cibernodes_cluster:latest"
+# 1. Formato especial de Enroot: registry#user/repo
+IMAGE="ghcr.io#antosister/cibernodes_cluster:latest"
 
 # 2. Ejecutamos usando la ruta de CEPH
 srun --container-image="$IMAGE" \
