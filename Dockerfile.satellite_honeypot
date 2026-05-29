@@ -1,4 +1,4 @@
-# Dockerfile para CiberNodes - VERSIÓN TOLERANTE A WARNINGS
+# Dockerfile para CiberNodes - USANDO LIBCSP ORIGINAL (V1.X)
 FROM ubuntu:22.04 as builder
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -6,24 +6,14 @@ RUN apt-get update && apt-get install -y \
     build-essential cmake git python3 python3-pip pkg-config \
     libzmq3-dev curl wget
 
-# 1. Copiamos los archivos
+# 1. Copiamos Suchai-Sim (esto ya trae su propia libcsp compatible en src/lib/libcsp)
 COPY ./src/suchai-sim /opt/suchai-sim
-COPY ./libcsp /opt/suchai-sim/suchai-flight-software/src/lib/libcsp
 
-# 2. COMPILACIÓN MANUAL DE LIBCSP
+# 2. Preparamos libcsp original
 WORKDIR /opt/suchai-sim/suchai-flight-software/src/lib/libcsp
 RUN wget -O waf https://waf.io/waf-2.1.1 && chmod +x waf
 
-# CORRECCIÓN CRÍTICA: Desactivar "Warnings as Errors" para que no falle la compilación
-RUN sed -i 's/"-Werror",//g' wscript
-
-RUN ./waf configure --with-os=posix --enable-if-zmqhub --enable-crc32 --enable-rtable \
-    --with-driver-usart=linux --with-max-connections=100 \
-    --with-conn-queue-length=1000 --with-router-queue-length=1000 \
-    --prefix=/opt/suchai-sim/suchai-flight-software/src/lib/libcsp/libcsp
-RUN ./waf build install
-
-# 3. COMPILACIÓN DE SUCHAI-FS
+# 3. COMPILACIÓN DE SUCHAI-FS (que disparará la compilación de su propia libcsp)
 WORKDIR /opt/suchai-sim
 RUN mkdir -p build && cd build && \
     cmake .. -DAPP=plantsat -DSCH_NAME=PLANTSAT -DSCH_SW_VERSION="3.0.0-cibernodes" && \
