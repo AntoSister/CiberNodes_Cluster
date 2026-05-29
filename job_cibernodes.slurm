@@ -12,10 +12,10 @@ echo "=========================================================="
 echo "   EJECUTANDO CIBERNODES EN XI CLUSTER (USACH)            "
 echo "=========================================================="
 
-# 1. Formato especial de Enroot: registry#user/repo
-IMAGE="ghcr.io#antosister/cibernodes_cluster:latest"
+# 1. Ruta al archivo .sqsh que acabas de crear (estará en tu HOME)
+IMAGE="/home/ceph/acisternas/antosister+cibernodes_cluster+latest.sqsh"
 
-# 2. Ejecutamos usando la ruta de CEPH
+# 2. Ejecutamos usando el archivo local
 srun --container-image="$IMAGE" \
      --container-mounts="/home/ceph/acisternas/CiberNodes_Cluster:/opt/workspace" \
      /usr/local/bin/entrypoint.sh
