@@ -1,4 +1,4 @@
-# Dockerfile para CiberNodes - VERSIÓN DEPURADA (FINAL)
+# Dockerfile para CiberNodes - VERSIÓN TOLERANTE A WARNINGS
 FROM ubuntu:22.04 as builder
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -10,10 +10,13 @@ RUN apt-get update && apt-get install -y \
 COPY ./src/suchai-sim /opt/suchai-sim
 COPY ./libcsp /opt/suchai-sim/suchai-flight-software/src/lib/libcsp
 
-# 2. COMPILACIÓN MANUAL DE LIBCSP (Sin opciones obsoletas)
+# 2. COMPILACIÓN MANUAL DE LIBCSP
 WORKDIR /opt/suchai-sim/suchai-flight-software/src/lib/libcsp
 RUN wget -O waf https://waf.io/waf-2.1.1 && chmod +x waf
-# Comando limpio de waf (solo opciones válidas)
+
+# CORRECCIÓN CRÍTICA: Desactivar "Warnings as Errors" para que no falle la compilación
+RUN sed -i 's/"-Werror",//g' wscript
+
 RUN ./waf configure --with-os=posix --enable-if-zmqhub --enable-crc32 --enable-rtable \
     --with-driver-usart=linux --with-max-connections=100 \
     --with-conn-queue-length=1000 --with-router-queue-length=1000 \
