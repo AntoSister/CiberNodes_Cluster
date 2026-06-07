@@ -25,6 +25,7 @@ class SuchaiState(SatState):
         super().__init__(subsystem_states.values(), interface)
         self.subsystem_states = subsystem_states
         self.old_is_reachable = None
+        self.spoof_vbat = None
 
     def update(self, dt: Union[int, float]):
         # Process sat requests
@@ -113,11 +114,12 @@ class SuchaiState(SatState):
 
     def process_eps_request(self, message: bytes) -> bytes:
         if message[1] == SatellitePersonality.SIM_EPS_ADDR_HKP:
-            # --- ATAQUE DE INYECCIÓN DE DATOS ---
-            # Forzamos una lectura de batería crítica (3000 mV = 3V)
-            # En lugar de leer el valor real del simulador físico.
-            vbat = 3000 
-            # -------------------------------------
+            if self.spoof_vbat is not None:
+                vbat = self.spoof_vbat
+                print(f"!!! SPOOFING ACTIVE: Using VBat={vbat} !!!")
+            else:
+                vbat = int(self.subsystem_states['eps'].read_value('voltage').value)
+
             current_in = int(self.subsystem_states['eps'].read_value('current_in').value * 1000)
             current_out = int(self.subsystem_states['eps'].read_value('current_out').value * 1000)
             temp = int(self.subsystem_states['eps'].read_value('temperature').value - 273.15)
@@ -125,7 +127,6 @@ class SuchaiState(SatState):
             # current_out = random.randint(0, 12000)  # mA
             # temp = random.randint(-40, 125)  # ºC
             reply = struct.pack('iiii', vbat, current_in, current_out, temp)
-            print(f"!!! ATAQUE: Inyectando VBat={vbat} !!!")
             print(f"EPS HK: VBat={vbat}, CurrIn={current_in}, CurrOut={current_out}, Temp={temp}")
 
             # logging
@@ -133,9 +134,37 @@ class SuchaiState(SatState):
                 'temp': temp,
                 'vbat': vbat,
                 'current_in': current_in,
-                'current_out': current_in,
+                'current_out': current_out,
                 'reply': str(reply),
                 'context': 'eps_hk'
+            }
+            Logger.write_data(
+                _class_name=SuchaiState.__class__.__name__,
+                _id=id(reply),
+                _data=_data_,
+                _log_type='info'
+            )
+
+        elif message[1] == SatellitePersonality.SIM_EPS_ADDR_SPOOF:
+            # Data Injection Attack: Set a fake battery value
+            try:
+                new_vbat = struct.unpack('i', message[2:6])[0]
+                if new_vbat == 0:
+                    self.spoof_vbat = None
+                    print("!!! SPOOFING DEACTIVATED !!!")
+                else:
+                    self.spoof_vbat = new_vbat
+                    print(f"!!! DATA INJECTION: Battery spoofed to {new_vbat} mV !!!")
+                reply = struct.pack('i', 1) # Success
+            except Exception as e:
+                print(f"Error in spoofing command: {e}")
+                reply = struct.pack('i', 0) # Failure
+
+            # logging
+            _data_ = {
+                'spoof_vbat': self.spoof_vbat,
+                'reply': str(reply),
+                'context': 'eps_spoof_vbat'
             }
             Logger.write_data(
                 _class_name=SuchaiState.__class__.__name__,

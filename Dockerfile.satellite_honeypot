@@ -9,14 +9,28 @@ RUN apt-get update && apt-get install -y \
 # 1. Copiamos Suchai-Sim (esto ya trae su propia libcsp compatible en src/lib/libcsp)
 COPY ./src/suchai-sim /opt/suchai-sim
 
-# 2. Preparamos libcsp original
-WORKDIR /opt/suchai-sim/suchai-flight-software/src/lib/libcsp
-RUN wget -O waf https://waf.io/waf-2.1.1 && chmod +x waf
+# 2. Preparamos libcsp original y aplicamos parches para Python 3
+WORKDIR /opt/suchai-sim/suchai-flight-software
+RUN if [ ! -d "src/lib/libcsp" ]; then sh ../init.sh; fi
+RUN wget -O src/lib/libcsp/waf https://waf.io/waf-2.1.1 && chmod +x src/lib/libcsp/waf
+RUN sed -i 's/python2/python3/g' src/lib/CMakeLists.txt
+RUN sed -i "s/'0x0000'/0/g" src/lib/libcsp/wscript
 
-# 3. COMPILACIÓN DE SUCHAI-FS (que disparará la compilación de su propia libcsp)
+# 3. COMPILACIÓN DE SUCHAI-FS (con flags de simulación LINUX)
 WORKDIR /opt/suchai-sim
 RUN mkdir -p build && cd build && \
-    cmake .. -DAPP=plantsat -DSCH_NAME=PLANTSAT -DSCH_SW_VERSION="3.0.0-cibernodes" && \
+    cmake .. \
+    -DAPP=plantsat \
+    -DSCH_OS=LINUX \
+    -DSCH_ARCH=SIM \
+    -DSCH_NAME=PLANTSAT \
+    -DSCH_LOG=INFO \
+    -DSCH_ST_MODE=SQLITE \
+    -DSCH_COMM_NODE=1 \
+    -DSCH_DEVICE_ID=2 \
+    -DSCH_CSP_BUFFERS=100 \
+    -DSCH_SIM_INTERFACE_URI="tcp://localhost:5555" \
+    -DSCH_SW_VERSION="3.0.0-cibernodes" && \
     make -j4
 
 # Recolección de artefactos

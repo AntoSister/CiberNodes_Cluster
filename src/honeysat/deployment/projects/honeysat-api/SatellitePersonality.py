@@ -76,6 +76,8 @@ class SatellitePersonality:
     SIM_EPS_ADDR_HEATER = 0X02
     # Hard reset
     SIM_EPS_ADDR_RESET = 0X03
+    # Battery Spoofing (Data Injection)
+    SIM_EPS_ADDR_SPOOF = 0X04
 
     # Attitude Determination And Control System (ADCS)
     # ADCS device ID
