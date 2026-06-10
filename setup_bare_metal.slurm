@@ -12,26 +12,44 @@
 set -e
 
 PROJECT_ROOT=$PWD
+# Configuramos rutas para instalaciones locales en el HOME
 export PATH=$HOME/.local/bin:$PATH
+export CPATH=$HOME/.local/include:$CPATH
+export LIBRARY_PATH=$HOME/.local/lib:$LIBRARY_PATH
+export LD_LIBRARY_PATH=$HOME/.local/lib:$LD_LIBRARY_PATH
+export PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig:$PKG_CONFIG_PATH
 
 echo "--- INICIANDO PREPARACIÓN BARE METAL EN XI CLUSTER ---"
 
-echo "1. Instalando dependencias de Python (Local)..."
-# Usamos --user para no necesitar root
+echo "1. Instalando libzmq localmente (requerido para SuchaiFS)..."
+if [ ! -f "$HOME/.local/include/zmq.h" ]; then
+    mkdir -p $PROJECT_ROOT/deps && cd $PROJECT_ROOT/deps
+    wget https://github.com/zeromq/libzmq/releases/download/v4.3.5/zeromq-4.3.5.tar.gz
+    tar -xzf zeromq-4.3.5.tar.gz
+    cd zeromq-4.3.5
+    ./configure --prefix=$HOME/.local --without-libsodium --disable-perf
+    make -j4 install
+    cd $PROJECT_ROOT
+else
+    echo "libzmq ya está instalado en ~/.local"
+fi
+
+echo "2. Instalando dependencias de Python (Local)..."
 pip3 install --user --upgrade pip
 pip3 install --user numpy==1.26.4 scipy==1.15.2 pandas==2.2.3 matplotlib==3.10.1
 pip3 install --user casadi==3.6.7 jax==0.4.27 jaxlib==0.4.27
 pip3 install --user pybamm==25.1.1 pybammsolvers==0.1.0 skyfield==1.52
 pip3 install --user -r src/honeysat/deployment/projects/honeysat-api/requirements.txt
 
-echo "2. Preparando SuchaiFS y parches..."
+echo "3. Preparando SuchaiFS y parches..."
 cd src/suchai-sim/suchai-flight-software
+# Inicializamos submodulos si no están
 if [ ! -d "src/lib/libcsp" ]; then sh ../init.sh; fi
 wget -O src/lib/libcsp/waf https://waf.io/waf-2.1.1 && chmod +x src/lib/libcsp/waf
 sed -i 's/python2/python3/g' src/lib/CMakeLists.txt
 sed -i "s/'0x0000'/0/g" src/lib/libcsp/wscript
 
-echo "3. Compilando SuchaiFS (Plantsat SIM)..."
+echo "4. Compilando SuchaiFS (Plantsat SIM)..."
 cd $PROJECT_ROOT/src/suchai-sim
 rm -rf build && mkdir build && cd build
 cmake .. \
@@ -49,7 +67,7 @@ cmake .. \
     -DCMAKE_C_FLAGS="-w -Wno-error"
 make -j4
 
-echo "4. Descargando efemérides (de421.bsp)..."
+echo "5. Descargando efemérides (de421.bsp)..."
 mkdir -p $PROJECT_ROOT/data_efem
 python3 -c "from skyfield.api import Loader; load = Loader('$PROJECT_ROOT/data_efem'); load('de421.bsp')"
 
