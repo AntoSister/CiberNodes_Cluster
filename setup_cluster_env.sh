@@ -37,8 +37,10 @@ cp /workspace/src/suchai-sim/build/apps/plantsat/suchai-app /usr/local/bin/
 find /workspace/src/suchai-sim/build -name "libcsp.so*" -exec cp {} /usr/local/lib/ \;
 ldconfig
 
-echo "5. Instalando dependencias pesadas de HoneySat (esto tomará tiempo)..."
-cd /workspace/src/honeysat/deployment/projects/honeysat-api
+echo "5. Instalando HoneySat y sus dependencias (esto tomará tiempo)..."
+mkdir -p /opt/honeysat-api
+cp -r /workspace/src/honeysat/deployment/projects/honeysat-api/* /opt/honeysat-api/
+cd /opt/honeysat-api
 pip3 install --no-cache-dir numpy==1.26.4 scipy==1.15.2 pandas==2.2.3 matplotlib==3.10.1
 pip3 install --no-cache-dir casadi==3.6.7 jax==0.4.27 jaxlib==0.4.27
 pip3 install --no-cache-dir pybamm==25.1.1 pybammsolvers==0.1.0 skyfield==1.52
@@ -47,5 +49,17 @@ pip3 install --no-cache-dir -r requirements.txt
 echo "6. Descargando efemérides (de421.bsp)..."
 mkdir -p /opt/honeysat-api/TLE_and_data
 python3 -c "from skyfield.api import Loader; load = Loader('/opt/honeysat-api/TLE_and_data'); load('de421.bsp')"
+
+echo "7. Creando script de entrada (entrypoint)..."
+echo '#!/bin/bash
+export PYTHONPATH=/opt/honeysat-api
+# Iniciar simulador físico en segundo plano
+python3 -u /opt/honeysat-api/TestsAndExamples/TestZMQInterface.py > /var/log/honeysat.log 2>&1 &
+# Dar tiempo al simulador para arrancar
+sleep 5
+# Iniciar Software de Vuelo
+exec /usr/local/bin/suchai-app
+' > /usr/local/bin/entrypoint.sh
+chmod +x /usr/local/bin/entrypoint.sh
 
 echo "--- CONFIGURACIÓN DE ENTORNO COMPLETADA ---"

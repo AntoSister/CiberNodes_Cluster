@@ -10,5 +10,5 @@
 
 echo "--- PRUEBA MINIMALISTA ---"
 
-# Ejecutamos la imagen tal cual, sin montajes ni nada extra
-srun --container-image="acisternas/cibernodes:latest" /usr/local/bin/entrypoint.sh
+# Ejecutamos la imagen local creada con el script de preparación
+srun --container-image="cibernodes_env" /usr/local/bin/entrypoint.sh
