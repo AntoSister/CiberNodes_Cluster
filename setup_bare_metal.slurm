@@ -46,7 +46,7 @@ cmake .. \
     -DSCH_CSP_BUFFERS=100 \
     -DSCH_SIM_INTERFACE_URI="tcp://localhost:5555" \
     -DSCH_SW_VERSION="3.0.0-cibernodes" \
-    -DCMAKE_C_FLAGS="-Wno-error -Wno-format-truncation"
+    -DCMAKE_C_FLAGS="-w -Wno-error"
 make -j4
 
 echo "4. Descargando efemérides (de421.bsp)..."
