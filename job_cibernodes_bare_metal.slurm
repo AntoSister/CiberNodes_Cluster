@@ -15,6 +15,8 @@ export PATH=$HOME/.local/bin:$PATH
 export LD_LIBRARY_PATH=$PROJECT_ROOT/src/suchai-sim/build/src/lib/libcsp:$HOME/.local/lib:$LD_LIBRARY_PATH
 
 # Variables requeridas por HoneySat
+export HS_PORT="5567"
+export PYBAMM_DISABLE_TELEMETRY=1
 export SATELLITE_NAME_TLE="SUCHAI-2"
 export SATELLITE_NORAD_CATALOG_NUMBER="52194"
 export GROUND_STATION_LAT="-33.4569"

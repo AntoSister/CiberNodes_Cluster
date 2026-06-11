@@ -11,10 +11,12 @@ class ZMQInterface(Interface):
         Initialize the subsystem state. This method should be overridden by all subclasses.
         """
         super().__init__()
+        import os
+        port = os.environ.get("HS_PORT", "5555")
         self.context = zmq.Context()
         self.socket = self.context.socket(zmq.REP)
         self.socket.setsockopt(zmq.LINGER, 0)
-        self.socket.bind("tcp://*:5555")
+        self.socket.bind(f"tcp://*:{port}")
         self.poller = zmq.Poller()
         self.poller.register(self.socket, zmq.POLLIN)
 
