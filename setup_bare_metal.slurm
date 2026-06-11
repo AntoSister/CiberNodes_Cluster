@@ -52,9 +52,11 @@ sed -i "s/'0x0000'/0/g" src/lib/libcsp/wscript
 echo "4. Compilando SuchaiFS (Plantsat SIM)..."
 cd $PROJECT_ROOT/src/suchai-sim
 rm -rf build && mkdir build && cd build
-# Pasamos las rutas locales directamente a CMake para no romper el compilador
+# Pasamos las rutas locales directamente a CMake
 cmake .. \
     -DCMAKE_PREFIX_PATH=$HOME/.local \
+    -DCMAKE_INCLUDE_PATH=$HOME/.local/include \
+    -DCMAKE_LIBRARY_PATH=$HOME/.local/lib \
     -DAPP=plantsat \
     -DSCH_OS=LINUX \
     -DSCH_ARCH=SIM \
@@ -64,9 +66,10 @@ cmake .. \
     -DSCH_COMM_NODE=1 \
     -DSCH_DEVICE_ID=2 \
     -DSCH_CSP_BUFFERS=100 \
-    -DSCH_SIM_INTERFACE_URI="tcp://localhost:5555" \
-    -DSCH_SW_VERSION="3.0.0-cibernodes" \
-    -DCMAKE_C_FLAGS="-w -Wno-error"
+    -DSCH_SIM_INTERFACE_URI=\"tcp://localhost:5555\" \
+    -DSCH_SW_VERSION=\"3.0.0-cibernodes\" \
+    -DCMAKE_C_FLAGS=\"-w -Wno-error -I$HOME/.local/include\" \
+    -DCMAKE_EXE_LINKER_FLAGS=\"-L$HOME/.local/lib\"
 make -j4
 
 echo "5. Descargando efemérides (de421.bsp)..."
