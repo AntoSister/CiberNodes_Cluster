@@ -62,9 +62,9 @@ cmake .. \
     -DSCH_COMM_NODE=1 \
     -DSCH_DEVICE_ID=2 \
     -DSCH_CSP_BUFFERS=100 \
-    -DSCH_SIM_INTERFACE_URI="tcp://localhost:5555" \
-    -DSCH_SW_VERSION="3.0.0-cibernodes" \
-    -DCMAKE_C_FLAGS="-w -Wno-error"
+    -DSCH_SIM_INTERFACE_URI=\"tcp://localhost:5555\" \
+    -DSCH_SW_VERSION=\"3.0.0-cibernodes\" \
+    -DCMAKE_C_FLAGS=\"-w -Wno-error\"
 make -j4
 
 echo "5. Descargando efemérides (de421.bsp)..."
