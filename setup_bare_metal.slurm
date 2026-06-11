@@ -30,6 +30,19 @@ else
     echo "libzmq ya está instalado en ~/.local"
 fi
 
+echo "1.1 Instalando sqlite3 localmente (requerido para SuchaiFS)..."
+if [ ! -f "$HOME/.local/include/sqlite3.h" ]; then
+    mkdir -p $PROJECT_ROOT/deps && cd $PROJECT_ROOT/deps
+    wget https://www.sqlite.org/2024/sqlite-autoconf-3460000.tar.gz
+    tar -xzf sqlite-autoconf-3460000.tar.gz
+    cd sqlite-autoconf-3460000
+    ./configure --prefix=$HOME/.local
+    make -j4 install
+    cd $PROJECT_ROOT
+else
+    echo "sqlite3 ya está instalado en ~/.local"
+fi
+
 echo "2. Instalando dependencias de Python (Local)..."
 pip3 install --user --upgrade pip
 pip3 install --user numpy==1.26.4 scipy==1.15.2 pandas==2.2.3 matplotlib==3.10.1
