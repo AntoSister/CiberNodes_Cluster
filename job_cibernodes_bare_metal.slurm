@@ -16,6 +16,9 @@ export LD_LIBRARY_PATH=$PROJECT_ROOT/src/suchai-sim/build/src/lib/libcsp:$HOME/.
 
 # Variables requeridas por HoneySat
 export SATELLITE_NAME_TLE="SUCHAI-2"
+export SATELLITE_NORAD_CATALOG_NUMBER="52194"
+export GROUND_STATION_LAT="-33.4569"
+export GROUND_STATION_LON="-70.6661"
 export TLE_FILE="$PROJECT_ROOT/src/honeysat/deployment/projects/honeysat-api/TLE_and_data/suchai-2.tle"
 export DE421_PATH="$PROJECT_ROOT/data_efem/de421.bsp"
 
