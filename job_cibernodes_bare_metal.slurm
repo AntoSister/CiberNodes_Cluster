@@ -12,7 +12,12 @@
 PROJECT_ROOT=$PWD
 export PYTHONPATH=$PROJECT_ROOT/src/honeysat/deployment/projects/honeysat-api
 export PATH=$HOME/.local/bin:$PATH
-export LD_LIBRARY_PATH=$PROJECT_ROOT/src/suchai-sim/build/src/lib/libcsp:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=$PROJECT_ROOT/src/suchai-sim/build/src/lib/libcsp:$HOME/.local/lib:$LD_LIBRARY_PATH
+
+# Variables requeridas por HoneySat
+export SATELLITE_NAME_TLE="SUCHAI-2"
+export TLE_FILE="$PROJECT_ROOT/src/honeysat/deployment/projects/honeysat-api/TLE_and_data/suchai-2.tle"
+export DE421_PATH="$PROJECT_ROOT/data_efem/de421.bsp"
 
 echo "--- INICIANDO SIMULACIÓN BARE METAL ---"
 
