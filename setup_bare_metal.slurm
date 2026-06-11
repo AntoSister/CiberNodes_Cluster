@@ -49,6 +49,10 @@ wget -O src/lib/libcsp/waf https://waf.io/waf-2.1.1 && chmod +x src/lib/libcsp/w
 sed -i 's/python2/python3/g' src/lib/CMakeLists.txt
 sed -i "s/'0x0000'/0/g" src/lib/libcsp/wscript
 
+# Parche para asegurar que las macros de strings tengan comillas en C
+sed -i 's/@SCH_SIM_INTERFACE_URI@/"@SCH_SIM_INTERFACE_URI@"/g' ../apps/plantsat/src/drivers/drivers-sim/include/drivers-sim/config.h.in
+sed -i 's/@SCH_SW_VERSION@/"@SCH_SW_VERSION@"/g' include/suchai/config.h.in
+
 echo "4. Compilando SuchaiFS (Plantsat SIM)..."
 cd $PROJECT_ROOT/src/suchai-sim
 rm -rf build && mkdir build && cd build
@@ -66,8 +70,8 @@ cmake .. \
     -DSCH_COMM_NODE=1 \
     -DSCH_DEVICE_ID=2 \
     -DSCH_CSP_BUFFERS=100 \
-    -DSCH_SIM_INTERFACE_URI='\"tcp://localhost:5555\"' \
-    -DSCH_SW_VERSION='\"3.0.0-cibernodes\"' \
+    -DSCH_SIM_INTERFACE_URI="tcp://localhost:5555" \
+    -DSCH_SW_VERSION="3.0.0-cibernodes" \
     -DCMAKE_C_FLAGS="-w -Wno-error -I$HOME/.local/include" \
     -DCMAKE_EXE_LINKER_FLAGS="-L$HOME/.local/lib"
 make -j4
