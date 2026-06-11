@@ -38,20 +38,24 @@ pip3 install --user pybamm==25.1.1 pybammsolvers==0.1.0 skyfield==1.52
 pip3 install --user -r src/honeysat/deployment/projects/honeysat-api/requirements.txt
 
 echo "3. Preparando SuchaiFS y parches..."
-cd src/suchai-sim/suchai-flight-software
-# Asegurar que init.sh se ejecute desde la carpeta correcta
-if [ ! -d "src/lib/libcsp" ]; then 
-    cd ..
+# Asegurar que los archivos de plantilla estén limpios (por si falló antes)
+git checkout src/suchai-sim/suchai-flight-software/include/suchai/config.h.in
+git checkout src/suchai-sim/apps/plantsat/src/drivers/drivers-sim/include/drivers-sim/config.h.in
+
+cd src/suchai-sim
+# Inicializamos submodulos si no están (desde la raíz de suchai-sim)
+if [ ! -d "suchai-flight-software/src/lib/libcsp" ]; then 
     sh init.sh
-    cd suchai-flight-software
 fi
+
+cd suchai-flight-software
 wget -O src/lib/libcsp/waf https://waf.io/waf-2.1.1 && chmod +x src/lib/libcsp/waf
 sed -i 's/python2/python3/g' src/lib/CMakeLists.txt
 sed -i "s/'0x0000'/0/g" src/lib/libcsp/wscript
 
-# Parche para asegurar que las macros de strings tengan comillas en C
+# Parche SOLO para el archivo que NO tiene comillas (SCH_SIM_INTERFACE_URI)
+# SCH_SW_VERSION ya tiene comillas en su config.h.in original
 sed -i 's/@SCH_SIM_INTERFACE_URI@/"@SCH_SIM_INTERFACE_URI@"/g' ../apps/plantsat/src/drivers/drivers-sim/include/drivers-sim/config.h.in
-sed -i 's/@SCH_SW_VERSION@/"@SCH_SW_VERSION@"/g' include/suchai/config.h.in
 
 echo "4. Compilando SuchaiFS (Plantsat SIM)..."
 cd $PROJECT_ROOT/src/suchai-sim
