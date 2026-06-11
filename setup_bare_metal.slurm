@@ -12,16 +12,12 @@
 set -e
 
 PROJECT_ROOT=$PWD
-# Configuramos rutas para instalaciones locales en el HOME
+# Solo PATH es seguro exportar globalmente
 export PATH=$HOME/.local/bin:$PATH
-export CPATH=$HOME/.local/include:$CPATH
-export LIBRARY_PATH=$HOME/.local/lib:$LIBRARY_PATH
-export LD_LIBRARY_PATH=$HOME/.local/lib:$LD_LIBRARY_PATH
-export PKG_CONFIG_PATH=$HOME/.local/lib/pkgconfig:$PKG_CONFIG_PATH
 
 echo "--- INICIANDO PREPARACIÓN BARE METAL EN XI CLUSTER ---"
 
-echo "1. Instalando libzmq localmente (requerido para SuchaiFS)..."
+echo "1. Instalando libzmq localmente..."
 if [ ! -f "$HOME/.local/include/zmq.h" ]; then
     mkdir -p $PROJECT_ROOT/deps && cd $PROJECT_ROOT/deps
     wget https://github.com/zeromq/libzmq/releases/download/v4.3.5/zeromq-4.3.5.tar.gz
@@ -43,8 +39,12 @@ pip3 install --user -r src/honeysat/deployment/projects/honeysat-api/requirement
 
 echo "3. Preparando SuchaiFS y parches..."
 cd src/suchai-sim/suchai-flight-software
-# Inicializamos submodulos si no están
-if [ ! -d "src/lib/libcsp" ]; then sh ../init.sh; fi
+# Asegurar que init.sh se ejecute desde la carpeta correcta
+if [ ! -d "src/lib/libcsp" ]; then 
+    cd ..
+    sh init.sh
+    cd suchai-flight-software
+fi
 wget -O src/lib/libcsp/waf https://waf.io/waf-2.1.1 && chmod +x src/lib/libcsp/waf
 sed -i 's/python2/python3/g' src/lib/CMakeLists.txt
 sed -i "s/'0x0000'/0/g" src/lib/libcsp/wscript
@@ -52,7 +52,9 @@ sed -i "s/'0x0000'/0/g" src/lib/libcsp/wscript
 echo "4. Compilando SuchaiFS (Plantsat SIM)..."
 cd $PROJECT_ROOT/src/suchai-sim
 rm -rf build && mkdir build && cd build
+# Pasamos las rutas locales directamente a CMake para no romper el compilador
 cmake .. \
+    -DCMAKE_PREFIX_PATH=$HOME/.local \
     -DAPP=plantsat \
     -DSCH_OS=LINUX \
     -DSCH_ARCH=SIM \
@@ -62,9 +64,9 @@ cmake .. \
     -DSCH_COMM_NODE=1 \
     -DSCH_DEVICE_ID=2 \
     -DSCH_CSP_BUFFERS=100 \
-    -DSCH_SIM_INTERFACE_URI=\"tcp://localhost:5555\" \
-    -DSCH_SW_VERSION=\"3.0.0-cibernodes\" \
-    -DCMAKE_C_FLAGS=\"-w -Wno-error\"
+    -DSCH_SIM_INTERFACE_URI="tcp://localhost:5555" \
+    -DSCH_SW_VERSION="3.0.0-cibernodes" \
+    -DCMAKE_C_FLAGS="-w -Wno-error"
 make -j4
 
 echo "5. Descargando efemérides (de421.bsp)..."
@@ -72,4 +74,3 @@ mkdir -p $PROJECT_ROOT/data_efem
 python3 -c "from skyfield.api import Loader; load = Loader('$PROJECT_ROOT/data_efem'); load('de421.bsp')"
 
 echo "--- PREPARACIÓN BARE METAL COMPLETADA ---"
-echo "Binario disponible en: $PROJECT_ROOT/src/suchai-sim/build/apps/plantsat/suchai-app"
