@@ -17,6 +17,12 @@
 echo "--- INICIANDO PRUEBA DE METEORNET EN MODO BARE METAL ---"
 cd $HOME/CiberNodes_Cluster/src/meteornet
 
+# NUEVO: Generar los archivos TLE si no existen (ya que están ignorados en Git)
+echo "Generando archivos TLE para la simulación..."
+cd tles/constellation_tles
+bash TLE_Generation.sh
+cd ../..
+
 # Aseguramos que la carpeta de logs exista y esté limpia para la prueba
 rm -f sat_network.log
 
