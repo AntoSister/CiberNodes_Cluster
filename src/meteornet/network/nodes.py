@@ -17,6 +17,7 @@ import numbers
 import logging
 import os
 import time
+import subprocess # NUEVO: Para lanzar procesos en el SO en modo Bare Metal
 
 
 class NetNode:
@@ -263,10 +264,26 @@ class NetNode:
             return self.host.cmd(ping_cmd)
 
     def cmd(self, command):
+        """
+        Ejecuta un comando en el nodo.
+        - Modo Original: Usa el host de Mininet (contenedor o host virtual).
+        - Modo Bare Metal: Si no hay host, lanza un proceso real en el cluster usando subprocess.
+        """
         run_cmd = None
         if self.host:
+            # Si existe un host de Mininet, lo usamos (comportamiento original)
             run_cmd = Thread(target=self.host.cmd, args=[command, ])
             run_cmd.start()
+        else:
+            # NUEVO: Si estamos en Bare Metal (no hay host), usamos subprocess del SO
+            def run_os_cmd(cmd):
+                logging.info(f"MODO BARE METAL - Ejecutando comando real: {cmd}")
+                # Popen lanza el proceso en segundo plano sin bloquear MeteorNet
+                subprocess.Popen(cmd, shell=True)
+            
+            run_cmd = Thread(target=run_os_cmd, args=[command, ])
+            run_cmd.start()
+            
         return run_cmd
 
     def serialize_cache(self):

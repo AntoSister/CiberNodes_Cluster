@@ -249,6 +249,8 @@ def get_parameters():
     parser.add_argument('-i', '--init_second', default=0, type=int, help='Init second of simulation')
     parser.add_argument('-x', '--speed_factor', default=1, type=int, help='Accelerate simulation time by speed factor')
     parser.add_argument('-d', '--docker', default=False, action='store_true', help='Use docker containers to simulate hosts')
+    # Argumento para desactivar Mininet/Docker y usar procesos locales directamente
+    parser.add_argument('--bare_metal', default=False, action='store_true', help='Use bare metal processes instead of containers/mininet')
     parser.add_argument('-r', '--remote_sdn', default=False, action='store_true', help='Choose if use remote SDN')
     parser.add_argument('-c', '--clean', default=False, action='store_true')
     # parser.add_argument('--sflow', default=False, action='store_true', help='Activate sflow metrics')
@@ -330,16 +332,20 @@ if __name__ == "__main__":
     sat_net = None
     mon_flows = None
     terms = []
-    db = SatDataBase('172.17.0.1')
+    # MODIFICADO: Usamos localhost (127.0.0.1) si es Bare Metal, de lo contrario usamos la IP del bridge de Docker
+    db_ip = '127.0.0.1' if args.bare_metal else '172.17.0.1'
+    db = SatDataBase(db_ip)
     db.drop_db()
     try:
         # Create network topology
+        # MODIFICADO: Desactivamos la creación de red virtual y contenedores si estamos en modo bare_metal
         sat_net, sat_nodes, gnd_nodes, gnd_gateways = create_sat_network(sat_ids=sats, gnd_ids=gnds,
                                                                        tle_path=args.tle_path,
                                                                        gnd_file=args.gnd_file,
                                                                        tle_name=None,
                                                                        tle_pattern='TLE_*_{}.txt',
-                                                                       use_docker=args.docker,
+                                                                       use_network=not args.bare_metal, # No crear red Mininet si es bare_metal
+                                                                       use_docker=args.docker and not args.bare_metal, # No usar Docker si es bare_metal
                                                                        docker_image=args.docker_image,
                                                                        sat_servers=args.sat_servers, 
                                                                        gnd_servers=args.gnd_servers,
@@ -370,7 +376,9 @@ if __name__ == "__main__":
                        ground_contact, sky_contact, args.init_second, db,
                        speed_factor=-1, init_time=args.init_second,
                        step=args.step, update_status=False, multilink=args.multilink)
-        sat_net.start()
+        # MODIFICADO: Solo iniciamos la red si sat_net no es None (no es Bare Metal)
+        if sat_net:
+            sat_net.start()
         logging.info('Network started\n')
         mon_flows = None
         # if args.sflow:
@@ -379,13 +387,18 @@ if __name__ == "__main__":
         #     mon_flows.monitor_flow()
         for n in gnd_nodes+gnd_gateways:
             # n.host.cmd('/home/sflow-rt/start.sh &')
-            logging.info('Ground Node {} has IP {}\n'.format(n.name, n.host.IP()))
+            # MODIFICADO: Usamos localhost si no hay red virtual de Mininet
+            n_ip = n.host.IP() if n.host else '127.0.0.1'
+            logging.info('Ground Node {} has IP {}\n'.format(n.name, n_ip))
             # print(dict(n))
             db.upsert_in_collection(dict(n), 'nodes')
         for n in sat_nodes:
             # n.host.cmd('./sandbox/sflow-rt/start.sh &')
             if n.host:
                 logging.info('Sat Node {} has IP {}\n'.format(n.name, n.host.IP()))
+            else:
+                # MODIFICADO: Log informativo para modo Bare Metal
+                logging.info('Sat Node {} running on Bare Metal mode\n'.format(n.name))
             db.upsert_in_collection(dict(n), 'nodes')
 
         save_status(db, 0, time.time(), n_sat=len(sat_nodes), n_gnd=len(gnd_nodes), n_ggs=len(gnd_gateways), 
@@ -423,17 +436,21 @@ if __name__ == "__main__":
             for j, node_dst in enumerate(all_host_nodes):
                 if i == j or j < i:
                     continue
-                ping_ths.append(node_src.ping(node_dst))
+                # MODIFICADO: Solo intentamos ping si ambos nodos tienen un host de Mininet
+                if node_src.host and node_dst.host:
+                    ping_ths.append(node_src.ping(node_dst))
 
         if args.docker:
             for n in gnd_nodes:
                 n.cmd('python3 task_generator.py -n {} -i {} -s {} -d {} --seed {} {} > tasks.logs 2>&1 &'.format(n.name, n.host.IP(),
                         args.sim_seconds, args.devices, args.seed, '-r' if args.remote_sdn else ''))
         else:
-            from mininet.cli import CLI
-            terms = makeTerms([n.host for n in gnd_nodes if n.host])
-            terms += makeTerms([n.host for n in sat_nodes if n.host])
-            terms += makeTerms([n.host for n in gnd_gateways if n.host])
+            # MODIFICADO: Solo intentamos abrir terminales xterm si NO es bare_metal
+            if not args.bare_metal:
+                from mininet.cli import CLI
+                terms = makeTerms([n.host for n in gnd_nodes if n.host])
+                terms += makeTerms([n.host for n in sat_nodes if n.host])
+                terms += makeTerms([n.host for n in gnd_gateways if n.host])
         sleep_secs = 10
         for t in range(sleep_secs):
             logging.info('Sleeping {} secs to start everything, {}/{} \n'.format(sleep_secs, t+1, sleep_secs))
@@ -451,7 +468,7 @@ if __name__ == "__main__":
         for t in terms:
             t.wait()
 
-        if args.client:
+        if args.client and not args.bare_metal: # MODIFICADO: No lanzamos la consola si no hay red virtual
             CLI(sat_net)
 
         clean_exit(mon_flows, terms)
