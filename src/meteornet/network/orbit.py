@@ -1,11 +1,24 @@
-from mininet.log import setLogLevel, info
-from multiprocessing import Pool
-from mininet.net import Mininet
-from mininet.node import RemoteController, OVSController,  OVSSwitch
-from mininet.link import TCLink
+# MODIFICADO: Bloque de importación protegida para Mininet
+try:
+    from mininet.log import setLogLevel, info
+    from mininet.net import Mininet
+    from mininet.node import RemoteController, OVSController,  OVSSwitch
+    from mininet.link import TCLink
+except ImportError:
+    # Definimos funciones y clases vacías para el cluster
+    def setLogLevel(*args, **kwargs): pass
+    def info(msg): print(msg)
+    class Mininet: pass
+    class TCLink: pass
 
 from network.nodes import SatNode, GndNode, GndGateway,  NodeGenerator
-from comnetsemu.net import Containernet
+
+# MODIFICADO: Bloque de importación protegida para Comnetsemu
+try:
+    from comnetsemu.net import Containernet
+except ImportError:
+    class Containernet: pass
+
 from network.orbital_plane import OrbitalPlane
 from enum import Enum
 from multiprocessing import Pool

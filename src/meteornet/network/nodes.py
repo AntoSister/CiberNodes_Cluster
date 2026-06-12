@@ -1,7 +1,20 @@
 import time
 
-from mininet.node import CPULimitedHost, Host, Node
-from comnetsemu.net import Containernet
+# MODIFICADO: Bloque de importación protegida para Mininet
+try:
+    from mininet.node import CPULimitedHost, Host, Node
+except ImportError:
+    # Definimos clases vacías para evitar errores de referencia en el cluster
+    class CPULimitedHost: pass
+    class Host: pass
+    class Node: pass
+
+# MODIFICADO: Bloque de importación protegida para Comnetsemu
+try:
+    from comnetsemu.net import Containernet
+except ImportError:
+    class Containernet: pass
+
 from pathlib import Path
 from sgp4.api import Satrec, WGS72, jday, days2mdhms
 from threading import Thread

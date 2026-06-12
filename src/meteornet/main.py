@@ -12,8 +12,16 @@ from multiprocessing import Pool
 from pathlib import Path
 from numpy import random
 
-from mininet.log import setLogLevel, info
-from mininet.term import makeTerms
+# MODIFICADO: Bloque de importación protegida para Mininet
+try:
+    from mininet.log import setLogLevel, info
+    from mininet.term import makeTerms
+except ImportError:
+    # Si estamos en el cluster (Bare Metal), Mininet no está instalado.
+    # Definimos funciones vacías para que el resto del código no falle al llamarlas.
+    def setLogLevel(*args, **kwargs): pass
+    def info(msg): logging.info(msg)
+    def makeTerms(*args, **kwargs): return []
 
 from sflow import config_switches
 from monitor_flows import MonitorFlows
@@ -21,8 +29,16 @@ from sat_db import SatDataBase, EdgeControl, EdgeOrchestration
 from network.orbit import propagate_orbit, create_sat_network
 from network.graph import GraphNetwork
 from network.nodes import GndGateway
-from comnetsemu.clean import cleanup
-from comnetsemu.clean import sh
+
+# MODIFICADO: Bloque de importación protegida para Comnetsemu
+try:
+    from comnetsemu.clean import cleanup
+    from comnetsemu.clean import sh
+except ImportError:
+    # Definimos funciones dummy para evitar errores de importación
+    def cleanup(): pass
+    def sh(cmd, **kwargs): return ""
+
 from logging.handlers import RotatingFileHandler
 
 
