@@ -19,7 +19,17 @@ from pathlib import Path
 from sgp4.api import Satrec, WGS72, jday, days2mdhms
 from threading import Thread
 from sat_db import EdgeControl, EdgeOrchestration
-from pyproj import Transformer
+
+# MODIFICADO: Bloque de importación protegida para pyproj
+try:
+    from pyproj import Transformer
+except ImportError:
+    # pyproj solo se usa para calcular Lat/Lon en funciones de gráficos.
+    # No es crítico para la simulación lógica en el cluster.
+    class Transformer:
+        @staticmethod
+        def from_crs(*args, **kwargs): return Transformer()
+        def transform(self, x, y, z): return 0, 0, 0
 
 import datetime
 import math

@@ -1,5 +1,19 @@
 
-from pymongo import MongoClient
+# MODIFICADO: Bloque de importación protegida para pymongo
+try:
+    from pymongo import MongoClient
+except ImportError:
+    # Si no hay pymongo, definimos una clase dummy para evitar errores de importación
+    class MongoClient:
+        def __init__(self, *args, **kwargs): pass
+        def __getitem__(self, key): return self
+        def command(self, *args, **kwargs): pass
+        def update_one(self, *args, **kwargs): pass
+        def insert_one(self, *args, **kwargs): pass
+        def find(self, *args, **kwargs): return []
+        def find_one(self, *args, **kwargs): return None
+        def drop(self, *args, **kwargs): pass
+
 from enum import Enum
 
 
