@@ -536,35 +536,31 @@ class SatNode(NetNode):
     def run_satellite(self):
         """
         Lanza el software del satélite (SuchaiFS + HoneySat) como procesos Bare Metal.
-        - Calcula puertos únicos para evitar conflictos.
-        - Configura las variables de entorno necesarias.
         """
-        # 1. Calcular puertos únicos basados en el ID del satélite
-        # Usamos 5567 como base (acordado en MEMORY.md) y saltamos de 2 en 2
-        # para dejar espacio a futuros puertos adicionales si se necesitan.
         base_port = 5567
         sat_port = base_port + (self.id * 2)
         
-        # 2. Definir rutas (asumiendo estructura del cluster)
         project_root = os.path.expanduser("~/CiberNodes_Cluster")
         suchai_app = os.path.join(project_root, "src/suchai-sim/build/apps/plantsat/suchai-app")
-        
-        # 3. Lanzar HoneySat (Simulador de Física)
-        # MODIFICADO: Añadimos PYTHONPATH para que el script encuentre sus propios módulos (Interfaces, etc.)
         honeysat_api_root = os.path.join(project_root, "src/honeysat/deployment/projects/honeysat-api")
         honeysat_path = os.path.join(honeysat_api_root, "TestsAndExamples/TestZMQInterface.py")
+
+        # Usamos rutas absolutas para los logs para evitar que se pierdan
+        hs_log = os.path.join(project_root, f"honeysat_{self.name}.log")
+        fs_log = os.path.join(project_root, f"suchaifs_{self.name}.log")
         
-        # El comando ahora exporta HS_PORT y también añade la raíz de HoneySat al PYTHONPATH
-        honeysat_cmd = f"export HS_PORT={sat_port} && export PYTHONPATH=$PYTHONPATH:{honeysat_api_root} && python3 {honeysat_path} > honeysat_{self.name}.log 2>&1 &"
+        # Eliminamos el '&' al final porque subprocess.Popen ya lanza en segundo plano.
+        # Esto evita que la shell de SLURM limpie los procesos prematuramente.
+        honeysat_cmd = f"export HS_PORT={sat_port} && export PYTHONPATH=$PYTHONPATH:{honeysat_api_root} && python3 {honeysat_path} > {hs_log} 2>&1"
+        suchai_cmd = f"export HS_PORT={sat_port} && {suchai_app} > {fs_log} 2>&1"
+
+        # Mensaje directo a la consola para confirmar el intento de lanzamiento
+        print(f"--- ORQUESTADOR: Lanzando {self.name} (Puerto: {sat_port}) ---")
         logging.info(f"Lanzando HoneySat para {self.name} en puerto {sat_port}")
         self.cmd(honeysat_cmd)
         
-        # Esperamos un momento para que el socket de HoneySat esté listo
         time.sleep(2)
         
-        # 4. Lanzar SuchaiFS (Software de Vuelo)
-        # SuchaiFS leerá HS_PORT para saber a qué puerto de HoneySat conectarse.
-        suchai_cmd = f"export HS_PORT={sat_port} && {suchai_app} > suchaifs_{self.name}.log 2>&1 &"
         logging.info(f"Lanzando SuchaiFS para {self.name} conectado al puerto {sat_port}")
         self.cmd(suchai_cmd)
 
