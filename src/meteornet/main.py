@@ -413,8 +413,9 @@ if __name__ == "__main__":
             if n.host:
                 logging.info('Sat Node {} has IP {}\n'.format(n.name, n.host.IP()))
             else:
-                # MODIFICADO: Log informativo para modo Bare Metal
-                logging.info('Sat Node {} running on Bare Metal mode\n'.format(n.name))
+                # MODIFICADO: Lanzar el software real (SuchaiFS + HoneySat) en modo Bare Metal
+                logging.info('Sat Node {} - Lanzando procesos Bare Metal (SuchaiFS + HoneySat)\n'.format(n.name))
+                n.run_satellite() # <-- Ejecuta el software de vuelo y física
             db.upsert_in_collection(dict(n), 'nodes')
 
         save_status(db, 0, time.time(), n_sat=len(sat_nodes), n_gnd=len(gnd_nodes), n_ggs=len(gnd_gateways), 

@@ -533,6 +533,46 @@ class SatNode(NetNode):
     def base_name(self):
         return 'st'
 
+    def run_satellite(self):
+        """
+        Lanza el software del satélite (SuchaiFS + HoneySat) como procesos Bare Metal.
+        - Calcula puertos únicos para evitar conflictos.
+        - Configura las variables de entorno necesarias.
+        """
+        # 1. Calcular puertos únicos basados en el ID del satélite
+        # Usamos 5567 como base (acordado en MEMORY.md) y saltamos de 2 en 2
+        # para dejar espacio a futuros puertos adicionales si se necesitan.
+        base_port = 5567
+        sat_port = base_port + (self.id * 2)
+        
+        # 2. Definir rutas (asumiendo estructura del cluster)
+        project_root = os.path.expanduser("~/CiberNodes_Cluster")
+        suchai_app = os.path.join(project_root, "src/suchai-sim/build/apps/plantsat/suchai-app")
+        
+        # 3. Lanzar HoneySat (Simulador de Física)
+        # Seteamos HS_PORT para que HoneySat sepa en qué puerto escuchar.
+        # Redirigimos la salida a un log específico por satélite para depurar.
+        honeysat_cmd = f"export HS_PORT={sat_port} && python3 {project_root}/src/honeysat/TestZMQInterface.py > honeysat_{self.name}.log 2>&1 &"
+        logging.info(f"Lanzando HoneySat para {self.name} en puerto {sat_port}")
+        self.cmd(honeysat_cmd)
+        
+        # Esperamos un momento para que el socket de HoneySat esté listo
+        time.sleep(2)
+        
+        # 4. Lanzar SuchaiFS (Software de Vuelo)
+        # SuchaiFS leerá HS_PORT para saber a qué puerto de HoneySat conectarse.
+        suchai_cmd = f"export HS_PORT={sat_port} && {suchai_app} > suchaifs_{self.name}.log 2>&1 &"
+        logging.info(f"Lanzando SuchaiFS para {self.name} conectado al puerto {sat_port}")
+        self.cmd(suchai_cmd)
+
+    def stop_satellite(self):
+        """
+        Detiene los procesos asociados a este satélite.
+        """
+        # Buscamos procesos que tengan el log o puerto de este satélite
+        stop_cmd = f"pkill -f 'HS_PORT={5567 + (self.id * 2)}'"
+        self.cmd(stop_cmd)
+
 
 class GndNode(NetNode):
     def __init__(self, latitude=None, longitude=None, altitude=None, net=None, id=1,
