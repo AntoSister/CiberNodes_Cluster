@@ -314,14 +314,25 @@ class NetNode:
                 'contacts': self.cache['contacts']}
 
     def __iter__(self):
+        """
+        Permite convertir el objeto a un diccionario (dict(node)).
+        - MODIFICADO: Usamos getattr(self, key) con un valor por defecto para evitar KeyErrors
+          cuando ciertos atributos de Mininet (como dpid) no existen en Bare Metal.
+        """
         for key in self.serialize_params:
-            if isinstance(self.__dict__[key], (int, float, str)):
-                yield key, self.__dict__[key]
-            elif isinstance(self.__dict__[key], numbers.Number):
-                yield key, self.__dict__[key].item()
+            # Obtenemos el valor de forma segura. Si no existe, usamos None.
+            val = getattr(self, key, None)
+            
+            if isinstance(val, (int, float, str)) or val is None:
+                yield key, val
+            elif isinstance(val, numbers.Number):
+                yield key, val.item()
             else:
-                yield key, dict(self.__dict__[key])
-        yield 'ip', self.host.IP() if self.host else ''
+                yield key, dict(val)
+        
+        # IP de red: si no hay host de Mininet, devolvemos localhost
+        yield 'ip', self.host.IP() if self.host else '127.0.0.1'
+        
         cache = self.serialize_cache()
         for key in cache.keys():
             yield key, cache[key]
