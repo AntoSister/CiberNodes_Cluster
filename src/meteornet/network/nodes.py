@@ -550,9 +550,9 @@ class SatNode(NetNode):
         suchai_app = os.path.join(project_root, "src/suchai-sim/build/apps/plantsat/suchai-app")
         
         # 3. Lanzar HoneySat (Simulador de Física)
-        # Seteamos HS_PORT para que HoneySat sepa en qué puerto escuchar.
-        # Redirigimos la salida a un log específico por satélite para depurar.
-        honeysat_cmd = f"export HS_PORT={sat_port} && python3 {project_root}/src/honeysat/TestZMQInterface.py > honeysat_{self.name}.log 2>&1 &"
+        # MODIFICADO: Ruta corregida a la ubicación real del script en el repositorio
+        honeysat_path = f"{project_root}/src/honeysat/deployment/projects/honeysat-api/TestsAndExamples/TestZMQInterface.py"
+        honeysat_cmd = f"export HS_PORT={sat_port} && python3 {honeysat_path} > honeysat_{self.name}.log 2>&1 &"
         logging.info(f"Lanzando HoneySat para {self.name} en puerto {sat_port}")
         self.cmd(honeysat_cmd)
         
