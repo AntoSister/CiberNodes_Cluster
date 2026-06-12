@@ -1,6 +1,13 @@
-from mininet.net import Mininet
-from mininet.log import info
-from mininet.util import quietRun
+# MODIFICADO: Bloque de importación protegida para Mininet
+try:
+    from mininet.net import Mininet
+    from mininet.log import info
+    from mininet.util import quietRun
+except ImportError:
+    class Mininet: pass
+    def info(*args): pass
+    def quietRun(*args): return ""
+
 from os import listdir, environ
 from json import dumps, loads
 from re import match, search
