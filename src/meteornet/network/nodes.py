@@ -553,16 +553,17 @@ class SatNode(NetNode):
         # El simulador busca un nombre de archivo TLE (ej: TLE_Satellite_1)
         sat_identity = f"TLE_Satellite_{self.id}"
 
-        # Comando HoneySat: Incluimos SATELLITE_NAME_TLE y PYTHONPATH
+        # Comando HoneySat: Incluimos SATELLITE_NAME_TLE y PYTHONPATH. 
+        # IMPORTANTE: El '&' al final es vital para que corra en segundo plano.
         honeysat_cmd = (
             f"export HS_PORT={sat_port} && "
             f"export SATELLITE_NAME_TLE={sat_identity} && "
             f"export PYTHONPATH=$PYTHONPATH:{honeysat_api_root} && "
-            f"python3 {honeysat_path} > {hs_log} 2>&1"
+            f"python3 {honeysat_path} > {hs_log} 2>&1 &"
         )
         
         # Comando SuchaiFS
-        suchai_cmd = f"export HS_PORT={sat_port} && {suchai_app} > {fs_log} 2>&1"
+        suchai_cmd = f"export HS_PORT={sat_port} && {suchai_app} > {fs_log} 2>&1 &"
 
         print(f"--- ORQUESTADOR: Lanzando {self.name} (Puerto: {sat_port}, ID: {sat_identity}) ---")
         
