@@ -545,23 +545,33 @@ class SatNode(NetNode):
         honeysat_api_root = os.path.join(project_root, "src/honeysat/deployment/projects/honeysat-api")
         honeysat_path = os.path.join(honeysat_api_root, "TestsAndExamples/TestZMQInterface.py")
 
-        # Usamos rutas absolutas para los logs para evitar que se pierdan
+        # Usamos rutas absolutas para los logs en la raíz del proyecto
         hs_log = os.path.join(project_root, f"honeysat_{self.name}.log")
         fs_log = os.path.join(project_root, f"suchaifs_{self.name}.log")
         
-        # Eliminamos el '&' al final porque subprocess.Popen ya lanza en segundo plano.
-        # Esto evita que la shell de SLURM limpie los procesos prematuramente.
-        honeysat_cmd = f"export HS_PORT={sat_port} && export PYTHONPATH=$PYTHONPATH:{honeysat_api_root} && python3 {honeysat_path} > {hs_log} 2>&1"
+        # Identidad del satélite para HoneySat
+        # El simulador busca un nombre de archivo TLE (ej: TLE_Satellite_1)
+        sat_identity = f"TLE_Satellite_{self.id}"
+
+        # Comando HoneySat: Incluimos SATELLITE_NAME_TLE y PYTHONPATH
+        honeysat_cmd = (
+            f"export HS_PORT={sat_port} && "
+            f"export SATELLITE_NAME_TLE={sat_identity} && "
+            f"export PYTHONPATH=$PYTHONPATH:{honeysat_api_root} && "
+            f"python3 {honeysat_path} > {hs_log} 2>&1"
+        )
+        
+        # Comando SuchaiFS
         suchai_cmd = f"export HS_PORT={sat_port} && {suchai_app} > {fs_log} 2>&1"
 
-        # Mensaje directo a la consola para confirmar el intento de lanzamiento
-        print(f"--- ORQUESTADOR: Lanzando {self.name} (Puerto: {sat_port}) ---")
-        logging.info(f"Lanzando HoneySat para {self.name} en puerto {sat_port}")
+        print(f"--- ORQUESTADOR: Lanzando {self.name} (Puerto: {sat_port}, ID: {sat_identity}) ---")
+        
+        logging.info(f"Lanzando HoneySat para {self.name}")
         self.cmd(honeysat_cmd)
         
         time.sleep(2)
         
-        logging.info(f"Lanzando SuchaiFS para {self.name} conectado al puerto {sat_port}")
+        logging.info(f"Lanzando SuchaiFS para {self.name}")
         self.cmd(suchai_cmd)
 
     def stop_satellite(self):
