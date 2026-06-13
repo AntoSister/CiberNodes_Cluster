@@ -39,7 +39,6 @@ import pandas as pd
 import numbers
 import logging
 import os
-import time
 import subprocess # NUEVO: Para lanzar procesos en el SO en modo Bare Metal
 
 
@@ -77,6 +76,9 @@ class NetNode:
                 self.add_link(self.host, self.switch, delay=host_delay)
 
     def change_link_parameters(self, node, distance):
+        if self.switch is None or node.switch is None:
+            return
+            
         connections = self.link().connectionsTo(node.link())
         if len(connections) > 0:
             bw, delay = self.calculate_link_parameters(node, distance)
@@ -121,32 +123,36 @@ class NetNode:
         self.active_links.remove(node)
 
     def enable_link(self, node,  enable, distance=None):
+        """
+        Activa o desactiva un enlace.
+        - MODIFICADO: En Bare Metal solo actualizamos el estado lógico.
+        """
+        if self.net is None:
+            if enable:
+                self.add_active_link(node)
+                node.add_active_link(self)
+            else:
+                try:
+                    self.remove_active_link(node)
+                    node.remove_active_link(self)
+                except: pass
+            return {self, node}
+
         out_link = self.check_link(node)
         nodes_changed = set()
         if enable:
             # Create Interface if not exist
             if not out_link[0]:
                 logging.info('Adding new connection up between {} and {}'.format(self.link(), node.link()))
-                # os.system(f'ovs-vsctl del-controller {node.link()}')
-                # os.system(f'ovs-vsctl del-controller {node.link()}')
-
-                # logging.info(f'{self.link().connectionsTo(node.link())}')
                 bw, delay = self.calculate_link_parameters(node, distance)
                 self.add_link(self.link(), node.link(), bw=bw, delay=delay)
                 time.sleep(0.1)
-                # new_link.interf1.ifconfig('up')
                 self.add_active_link(node)
                 node.add_active_link(self)
-                # os.system(f"sudo ovs-ofctl del-flows -O OpenFlow13 {self.name}")
-                # os.system(f"sudo ovs-ofctl del-flows -O OpenFlow13 {node.name}")
-                # self.restart_switch()
-                # node.restart_switch()
                 nodes_changed = {self, node}
             # Create logical link if link is down
             elif not out_link[1]:
                 logging.info('Old Connection up between {} and {}'.format(self.link(), node.link()))
-                # logging.info(f'{self.link().connectionsTo(node.link())}')
-                # self.net.configLinkStatus(self.link().name, node.link().name, 'up')
                 conns1  = self.link().connectionsTo(node.link())
                 conns2  = node.link().connectionsTo(self.link())
 
@@ -154,34 +160,17 @@ class NetNode:
                     while(not conn[0].isUp() and not conn[1].isUp()):
                         self.net.configLinkStatus(self.link().name, node.link().name, 'up')
                         self.net.configLinkStatus(node.link().name, self.link().name, 'up')
-                        # os.system(f"sudo ip link set {conn[0].name} up")
-                        # os.system(f"sudo ip link set {conn[1].name} up")
-
-                # self.restart_switch()
-                # node.restart_switch()
-
-                # os.system(f"sudo ovs-ofctl del-flows -O OpenFlow13 {node.link()}")
-                # os.system(f"sudo ovs-ofctl del-flows -O OpenFlow13 {self.link()}")
 
                 self.change_link_parameters(node, distance)
-
                 self.add_active_link(node)
                 node.add_active_link(self)
-                # links_changed = {self, node}
-            # Change bandwidth and delay according to distance
-            elif distance is not None:
-                self.change_link_parameters(node, distance)
-                # self.restart_switch()
-                # node.restart_switch()
-            # if len(links_changed) > 0:
-                # logging.info('Links changed: {}'.format([l.name for l in links_changed]))
         elif not enable:
             if out_link[1]:
-                os.system(f"sudo ovs-ofctl del-flows -O OpenFlow13 {self.link().name}")
-                os.system(f"sudo ovs-ofctl del-flows -O OpenFlow13 {node.link().name}")
-                # conns1  = self.link().connectionsTo(node.link())
-                # conns2  = node.link().connectionsTo(self.link())
-                # self.net.delLinkBetween(self.link().name, node.link().name, allLinks=True)
+                # MODIFICADO: Solo intentamos comandos de OVS si estamos en modo red
+                if self.net:
+                    os.system(f"sudo ovs-ofctl del-flows -O OpenFlow13 {self.link().name}")
+                    os.system(f"sudo ovs-ofctl del-flows -O OpenFlow13 {node.link().name}")
+                
                 delete_links = []
                 for link in self.net.links:
                     inf1 , inf2 = link.intf1, link.intf2
@@ -191,49 +180,44 @@ class NetNode:
                 for link in delete_links:
                     self.net.delLink(link)
 
+                if self.net:
+                    os.system(f'ovs-vsctl del-port {self.link().name} {self.link().name}-{node.link().name}')
+                    os.system(f'ovs-vsctl del-port {node.link().name} {node.link().name}-{self.link().name}')
                 
-                # connections = self.link().connectionsTo(node.link())[0]
-
-                # for conn in conns1:
-                #     self.net.delLink(conn[0])
-                #     self.net.delLink(conn[1])
-                    # time.sleep(0.1)
-                        # os.system(f"sudo ip link set {conn[0].name} down")
-                        # os.system(f"sudo ip link set {conn[1].name} down")
-                
-                # os.system(f"ip link delete {self.link().name}-{node.link().name}")
-                # os.system(f"ip link delete {node.link().name}-{self.link().name}")
-
-                os.system(f'ovs-vsctl del-port {self.link().name} {self.link().name}-{node.link().name}')
-                os.system(f'ovs-vsctl del-port {node.link().name} {node.link().name}-{self.link().name}')
                 time.sleep(0.2)
-                
                 self.remove_active_link(node)
                 node.remove_active_link(self)
                 nodes_changed = {self, node}
                 logging.info('Connection down between {} and {}, got outlink'.format(self.link(), node.link()))
-            # conns = self.link().connectionsTo(node.link())
-            # logging.info(f'ConnectionsTo {conns} {[[l.isUp() for l in con] for con in conns ]}')
         return nodes_changed
 
     def restart_switch(self):
+        # MODIFICADO: Guardia para Bare Metal
+        if self.switch is None:
+            return
+            
         if self.switch:
             # keep connections status to recover after the restart
             interfaces = self.switch.intfList()
             status = [intf.isUp() for intf in interfaces]
             self.switch.start(self.net.controllers)
-            # os.system(f"sudo ovs-ofctl del-flows -O OpenFlow13 {self.name}")
             for intf, stat in zip(interfaces, status):
                 if not stat:
                     n1 ,n2 = intf.name.split('-')
                     self.net.configLinkStatus(n1, n2, 'down')
-                    # self.net.configLinkStatus(n2, n1, 'down')
             time.sleep(0.3)
 
     def check_connection(self, nodes):
         return [self.check_link(n)[1] for n in nodes]
 
     def check_link(self, node):
+        """
+        Verifica si existe un enlace físico.
+        - MODIFICADO: Guardia para modo Bare Metal (evita AttributeError: NoneType).
+        """
+        if self.switch is None or node.switch is None:
+            return False, False
+            
         connections = self.link().connectionsTo(node.link())
         interface, status = False, False
         if len(connections) > 0:
@@ -274,17 +258,22 @@ class NetNode:
 
     def run_edge_server(self, cores=12, mecon=False,
                         edge_orchestration=EdgeOrchestration.ACCESS_ON, edge_control=EdgeControl.OFF,
-                        edge_mod=2, name=name, workers=1):
-        # self.cmd('FLASK_IP={} python3 edge_server.py &'.format(self.host.IP()))
+                        edge_mod=2, name='server', workers=1):
+        # En Bare Metal no soportamos edge server aún de forma nativa
+        if self.host is None:
+            logging.info(f"MODO BARE METAL - Omitiendo Edge Server para {self.name}")
+            return None
+            
         edge_cmd = f'export SERVERIP={self.host.IP()} SERVERCORES={cores} MECON={1 if mecon else 0} EDGEORCH={edge_orchestration.value} EDGECONTROL={edge_control.value} EDGEMOD={edge_mod} NODENAME={name} WORKERS={workers} && sh -c "gunicorn --bind $SERVERIP:5000 --workers={workers} --timeout=300  wsgi:app > server.log  2>&1 &"'
-        print(f'edge server cmd {edge_cmd}')
         return self.cmd(edge_cmd)
 
     def ping(self, node, timeout=5):
-        if node.host and self.host:
-            ping_cmd = f'ping -c 1 -W {timeout} {node.host.IP()}'
-            print(f'ping command {ping_cmd}')
-            return self.host.cmd(ping_cmd)
+        # MODIFICADO: Guardia para Bare Metal
+        if self.host is None or node.host is None:
+            return ""
+            
+        ping_cmd = f'ping -c 1 -W {timeout} {node.host.IP()}'
+        return self.host.cmd(ping_cmd)
 
     def cmd(self, command, env=None):
         """
@@ -385,7 +374,6 @@ class SatNode(NetNode):
         self.init_coords, self.init_date = self.read_tle(tle_name, tle_pattern, dir_path=dir_path, sat_id=id)
         self.get_id(id)
         self.coords = self.init_coords
-        # self.name = '{}{}'.format(self.base_name(), id) if self.name is None else self.name
         self.orbital_plane = None
         super().__init__(net, use_host=use_host)
 
@@ -413,10 +401,6 @@ class SatNode(NetNode):
             two_lines = lines[(sat_id-1)*3+1:(sat_id-1)*3+3]
         
         self.tle = (two_lines[0], two_lines[1])
-        # sat = 
-        # self.sgp4 = sat.sgp4
-        # self.sat = sat
-
         init_coords, init_date = self.initial_conditions()
         return init_coords, init_date
 
@@ -510,7 +494,6 @@ class SatNode(NetNode):
         return [np.linalg.norm(sat_coord - gnd_coords[i_s]) if c else 0 for i_s, c in enumerate(contacts)]
 
     def compute_neighbors(self, orbital_planes):
-        # print(self.id)
         if self.orbital_plane is None:
             add_to_plane = False
             for plane in orbital_planes:
@@ -518,13 +501,9 @@ class SatNode(NetNode):
                     add_to_plane = True
                     break
             if not add_to_plane:
-                # TODO: Create a new plane since is not in the list provided.
                 pass
         if self.orbital_plane is not None:
-            # Get neighbors in the same orbital plane
             neighbors = self.orbital_plane.get_neighbors(self)
-            # print('id', self.id, 'neighbors', [n.id for n in neighbors])
-            # Get nearest planes
             nearest_planes = self.orbital_plane.get_nearest_planes(orbital_planes)
             for pln in nearest_planes:
                 nearest_sat = pln.get_nearest_sat(self)
@@ -548,11 +527,9 @@ class SatNode(NetNode):
         honeysat_api_root = os.path.join(project_root, "src/honeysat/deployment/projects/honeysat-api")
         honeysat_path = os.path.join(honeysat_api_root, "TestsAndExamples/TestZMQInterface.py")
 
-        # Usamos rutas absolutas para los logs en la raíz del proyecto
         hs_log = os.path.join(project_root, f"honeysat_{self.name}.log")
         fs_log = os.path.join(project_root, f"suchaifs_{self.name}.log")
         
-        # Diccionario de entorno robusto (Inyección directa en Python)
         sat_env = {
             'HS_PORT': str(sat_port),
             'SATELLITE_NAME_TLE': f"TLE_Satellite_{self.id}",
@@ -562,7 +539,6 @@ class SatNode(NetNode):
             'PYTHONPATH': f"{os.environ.get('PYTHONPATH', '')}:{honeysat_api_root}"
         }
 
-        # Comandos limpios: no necesitamos 'export' porque Python inyecta el env directamente
         honeysat_cmd = f"python3 {honeysat_path} > {hs_log} 2>&1 &"
         suchai_cmd = f"{suchai_app} > {fs_log} 2>&1 &"
 
@@ -576,7 +552,6 @@ class SatNode(NetNode):
         """
         Detiene los procesos asociados a este satélite.
         """
-        # Buscamos procesos que tengan el log o puerto de este satélite
         stop_cmd = f"pkill -f 'HS_PORT={5567 + (self.id * 2)}'"
         self.cmd(stop_cmd)
 
@@ -694,6 +669,3 @@ class NodeGenerator:
             generated_nodes = [self.source_class(latitude=lat_lon[id][0], longitude=lat_lon[id][1], altitude=0.0, id=start_id+id)
                                for id in range(n_nodes)]
         return generated_nodes
-
-
-
