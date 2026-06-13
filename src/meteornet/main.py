@@ -233,7 +233,9 @@ def run_simulation(sat_nodes, gnd_nodes,
         conn_graph, nodes_dict = make_conn_graph(nodes, tables_t)
         nodes_restart = manage_graph_links(nodes_dict, conn_graph)
         for node in nodes_restart:
-            os.system(f"sudo ovs-ofctl del-flows -O OpenFlow13 {node.name}")
+            # MODIFICADO: No limpiar flows si no hay red virtual
+            if node.net:
+                os.system(f"sudo ovs-ofctl del-flows -O OpenFlow13 {node.name}")
                 # os.system(f"sudo ovs-ofctl del-flows -O OpenFlow13 {node.name}")
         for node in nodes_restart:
                 logging.info(f'Restarting switch {node.name}')
