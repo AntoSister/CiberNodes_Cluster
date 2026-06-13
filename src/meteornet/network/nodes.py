@@ -286,11 +286,10 @@ class NetNode:
             print(f'ping command {ping_cmd}')
             return self.host.cmd(ping_cmd)
 
-    def cmd(self, command):
+    def cmd(self, command, env=None):
         """
         Ejecuta un comando en el nodo.
-        - Modo Original: Usa el host de Mininet (contenedor o host virtual).
-        - Modo Bare Metal: Si no hay host, lanza un proceso real en el cluster usando subprocess.
+        - env: Diccionario opcional con variables de entorno (NUEVO).
         """
         run_cmd = None
         if self.host:
@@ -298,13 +297,17 @@ class NetNode:
             run_cmd = Thread(target=self.host.cmd, args=[command, ])
             run_cmd.start()
         else:
-            # NUEVO: Si estamos en Bare Metal (no hay host), usamos subprocess del SO
-            def run_os_cmd(cmd):
+            # NUEVO: Si estamos en Bare Metal, usamos subprocess con inyección de entorno
+            def run_os_cmd(cmd, extra_env):
                 logging.info(f"MODO BARE METAL - Ejecutando comando real: {cmd}")
-                # Popen lanza el proceso en segundo plano sin bloquear MeteorNet
-                subprocess.Popen(cmd, shell=True)
+                # Combinamos el entorno actual con el nuevo
+                current_env = os.environ.copy()
+                if extra_env:
+                    current_env.update(extra_env)
+                # Popen con env=current_env es la forma más segura de pasar variables
+                subprocess.Popen(cmd, shell=True, env=current_env)
             
-            run_cmd = Thread(target=run_os_cmd, args=[command, ])
+            run_cmd = Thread(target=run_os_cmd, args=[command, env])
             run_cmd.start()
             
         return run_cmd
@@ -535,7 +538,7 @@ class SatNode(NetNode):
 
     def run_satellite(self):
         """
-        Lanza el software del satélite (SuchaiFS + HoneySat) como procesos Bare Metal.
+        Lanza el software del satélite (SuchaiFS + HoneySat) con entorno blindado.
         """
         base_port = 5567
         sat_port = base_port + (self.id * 2)
@@ -549,35 +552,25 @@ class SatNode(NetNode):
         hs_log = os.path.join(project_root, f"honeysat_{self.name}.log")
         fs_log = os.path.join(project_root, f"suchaifs_{self.name}.log")
         
-        # Identidad del satélite para HoneySat
-        sat_identity = f"TLE_Satellite_{self.id}"
-        norad_id = str(1000 + self.id) 
-        gs_lat = "-33.45"              
-        gs_lon = "-70.66"              
+        # Diccionario de entorno robusto (Inyección directa en Python)
+        sat_env = {
+            'HS_PORT': str(sat_port),
+            'SATELLITE_NAME_TLE': f"TLE_Satellite_{self.id}",
+            'SATELLITE_NORAD_CATALOG_NUMBER': str(1000 + self.id),
+            'GROUND_STATION_LAT': "-33.45",
+            'GROUND_STATION_LON': "-70.66",
+            'PYTHONPATH': f"{os.environ.get('PYTHONPATH', '')}:{honeysat_api_root}"
+        }
 
-        # MODO BLINDADO: Variables inline antes del comando (más robusto)
-        # Añadimos un tag de versión 'vFinal_Identidad' para confirmar actualización
-        honeysat_cmd = (
-            f"HS_PORT={sat_port} "
-            f"SATELLITE_NAME_TLE={sat_identity} "
-            f"SATELLITE_NORAD_CATALOG_NUMBER={norad_id} "
-            f"GROUND_STATION_LAT={gs_lat} "
-            f"GROUND_STATION_LON={gs_lon} "
-            f"PYTHONPATH=$PYTHONPATH:{honeysat_api_root} "
-            f"python3 {honeysat_path} > {hs_log} 2>&1 &"
-        )
-        
-        suchai_cmd = f"HS_PORT={sat_port} {suchai_app} > {fs_log} 2>&1 &"
+        # Comandos limpios: no necesitamos 'export' porque Python inyecta el env directamente
+        honeysat_cmd = f"python3 {honeysat_path} > {hs_log} 2>&1 &"
+        suchai_cmd = f"{suchai_app} > {fs_log} 2>&1 &"
 
-        print(f"--- ORQUESTADOR (vFinal_Identidad): Lanzando {self.name} (Puerto: {sat_port}) ---")
+        print(f"--- ORQUESTADOR (vPro_PythonEnv): Lanzando {self.name} (Puerto: {sat_port}) ---")
         
-        logging.info(f"Lanzando HoneySat para {self.name}")
-        self.cmd(honeysat_cmd)
-        
+        self.cmd(honeysat_cmd, env=sat_env)
         time.sleep(2)
-        
-        logging.info(f"Lanzando SuchaiFS para {self.name}")
-        self.cmd(suchai_cmd)
+        self.cmd(suchai_cmd, env=sat_env)
 
     def stop_satellite(self):
         """
