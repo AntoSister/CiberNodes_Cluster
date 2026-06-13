@@ -550,30 +550,26 @@ class SatNode(NetNode):
         fs_log = os.path.join(project_root, f"suchaifs_{self.name}.log")
         
         # Identidad del satélite para HoneySat
-        # El simulador busca un nombre de archivo TLE (ej: TLE_Satellite_1)
         sat_identity = f"TLE_Satellite_{self.id}"
-        
-        # Variables adicionales requeridas por SatellitePersonality.py
-        norad_id = str(1000 + self.id) # ID ficticio basado en el índice
-        gs_lat = "-33.45"              # Latitud de Santiago (por defecto)
-        gs_lon = "-70.66"              # Longitud de Santiago (por defecto)
+        norad_id = str(1000 + self.id) 
+        gs_lat = "-33.45"              
+        gs_lon = "-70.66"              
 
-        # Comando HoneySat: Incluimos todas las variables de entorno obligatorias
-        # IMPORTANTE: El '&' al final asegura que corra en segundo plano.
+        # MODO BLINDADO: Variables inline antes del comando (más robusto)
+        # Añadimos un tag de versión 'vFinal_Identidad' para confirmar actualización
         honeysat_cmd = (
-            f"export HS_PORT={sat_port} && "
-            f"export SATELLITE_NAME_TLE={sat_identity} && "
-            f"export SATELLITE_NORAD_CATALOG_NUMBER={norad_id} && "
-            f"export GROUND_STATION_LAT={gs_lat} && "
-            f"export GROUND_STATION_LON={gs_lon} && "
-            f"export PYTHONPATH=$PYTHONPATH:{honeysat_api_root} && "
+            f"HS_PORT={sat_port} "
+            f"SATELLITE_NAME_TLE={sat_identity} "
+            f"SATELLITE_NORAD_CATALOG_NUMBER={norad_id} "
+            f"GROUND_STATION_LAT={gs_lat} "
+            f"GROUND_STATION_LON={gs_lon} "
+            f"PYTHONPATH=$PYTHONPATH:{honeysat_api_root} "
             f"python3 {honeysat_path} > {hs_log} 2>&1 &"
         )
         
-        # Comando SuchaiFS
-        suchai_cmd = f"export HS_PORT={sat_port} && {suchai_app} > {fs_log} 2>&1 &"
+        suchai_cmd = f"HS_PORT={sat_port} {suchai_app} > {fs_log} 2>&1 &"
 
-        print(f"--- ORQUESTADOR: Lanzando {self.name} (Puerto: {sat_port}, ID: {sat_identity}) ---")
+        print(f"--- ORQUESTADOR (vFinal_Identidad): Lanzando {self.name} (Puerto: {sat_port}) ---")
         
         logging.info(f"Lanzando HoneySat para {self.name}")
         self.cmd(honeysat_cmd)
